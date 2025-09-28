@@ -60,7 +60,7 @@ export default function SettingsPage() {
     try {
       const data = JSON.parse(text);
       const parsed = ExportSchema.safeParse(data);
-      if (!parsed.success) throw new Error(parsed.error.errors[0]?.message || 'Invalid JSON');
+      if (!parsed.success) throw new Error(parsed.error.issues?.[0]?.message || 'Invalid JSON');
       setPreview({
         books: data.books?.slice(0, 3) || [],
         notes: data.notes?.slice(0, 3) || [],
