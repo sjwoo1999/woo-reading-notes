@@ -36,7 +36,7 @@ export default function BooksSearchPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">도서 검색(카카오)</h1>
+      <h1 className="text-xl font-semibold">도서 검색(알라딘)</h1>
       <div className="vintage-card p-4 h-stack">
         <input value={q} onChange={(e)=>setQ(e.target.value)} placeholder="제목 또는 키워드" className="vintage-input" />
         <button className="vintage-button" onClick={search}>{loading ? '검색 중…' : '검색'}</button>

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSessionUser, isAdmin } from '@/lib/auth';
+import NewBookWizard from './NewBookWizard';
 import { z } from 'zod';
 
 const BookSchema = z.object({
@@ -42,24 +43,7 @@ export default async function NewBookPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">새 책 등록하기</h1>
-      <form action={createBook} className="vintage-card p-4" style={{display:'grid', gap:'8px'}}>
-        <input name="title" aria-label="제목" placeholder="제목 *" className="vintage-input" required />
-        <input name="author" aria-label="저자" placeholder="저자" className="vintage-input" />
-        <input name="publisher" aria-label="출판사" placeholder="출판사" className="vintage-input" />
-        <div className="h-stack">
-          <input name="published_year" aria-label="출판 연도" placeholder="출판 연도" className="vintage-input" />
-          <input name="isbn" aria-label="ISBN" placeholder="ISBN" className="vintage-input" />
-        </div>
-        <div className="h-stack">
-          <input name="rating" aria-label="평점" placeholder="평점 0-5" className="vintage-input" />
-          <input name="progress" aria-label="진행률" placeholder="진행률 0-100" className="vintage-input" />
-        </div>
-        <textarea name="summary" aria-label="요약" placeholder="요약" className="vintage-input" />
-        <div className="h-stack" style={{justifyContent:'flex-end'}}>
-          <a href="/library" className="vintage-button--danger">취소</a>
-          <button className="vintage-button">등록</button>
-        </div>
-      </form>
+      <NewBookWizard />
     </div>
   );
 }

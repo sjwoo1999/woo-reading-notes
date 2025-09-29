@@ -40,9 +40,15 @@ export async function GET(req: NextRequest): Promise<Response> {
   const query = url.searchParams.get('query')?.trim();
   const pageRaw = url.searchParams.get('page') ?? '1';
   const sizeRaw = url.searchParams.get('size') ?? '10';
+  const provider = (url.searchParams.get('provider') || 'aladin').toLowerCase();
 
-  if (!process.env.KAKAO_REST_API_KEY) {
-    return Response.json({ error: 'KAKAO_REST_API_KEY is not set', details: 'Set in environment and redeploy' }, { status: 500 });
+  // Provider key checks
+  if (provider === 'aladin') {
+    if (!process.env.ALADIN_TTB_KEY) {
+      return Response.json({ error: 'ALADIN_TTB_KEY is not set', details: 'Set in environment and redeploy' }, { status: 500 });
+    }
+  } else {
+    return Response.json({ error: 'Unsupported provider', details: provider }, { status: 400 });
   }
 
   if (!query) {
@@ -61,60 +67,75 @@ export async function GET(req: NextRequest): Promise<Response> {
     return Response.json({ error: 'Too Many Requests', details: 'Please retry later' }, { status: 429 });
   }
 
-  // call Kakao
-  const kakaoUrl = new URL('https://dapi.kakao.com/v3/search/book');
-  kakaoUrl.searchParams.set('query', query);
-  kakaoUrl.searchParams.set('page', String(page));
-  kakaoUrl.searchParams.set('size', String(size));
+  // No Kakao branch anymore; default and only provider is Aladin
 
-  const res = await fetch(kakaoUrl.toString(), {
-    headers: { Authorization: `KakaoAK ${process.env.KAKAO_REST_API_KEY}` },
-    // Kakao 권장 캐시 정책 문서상 명시 없음 → 여기선 no-store (확실하지 않음)
-    cache: 'no-store'
-  });
+  // Aladin (ItemSearch)
+  // 알라딘은 output=JS 시 JSON을 반환하나 Content-Type이 application/json이 아닐 수 있어 text로 받아 파싱 처리
+  const aladinUrl = new URL('https://www.aladin.co.kr/ttb/api/ItemSearch.aspx');
+  aladinUrl.searchParams.set('ttbkey', process.env.ALADIN_TTB_KEY as string);
+  aladinUrl.searchParams.set('Query', query);
+  aladinUrl.searchParams.set('QueryType', 'Keyword');
+  aladinUrl.searchParams.set('MaxResults', String(size)); // 알라딘은 1–100
+  aladinUrl.searchParams.set('start', String(page));
+  aladinUrl.searchParams.set('SearchTarget', 'Book');
+  aladinUrl.searchParams.set('output', 'JS');
+  aladinUrl.searchParams.set('Version', '20131101');
 
-  if (!res.ok) {
-    const text = await res.text();
-    return Response.json({ error: 'Upstream error', details: text }, { status: res.status });
+  const res2 = await fetch(aladinUrl.toString(), { cache: 'no-store' });
+  if (!res2.ok) {
+    const text = await res2.text();
+    return Response.json({ error: 'Upstream error', details: text }, { status: res2.status });
+  }
+  // 알라딘 JSON 구조는 문서에 상세 기술이 부족 — 안전하게 text로 받아 파싱 시도
+  const raw = await res2.text();
+  let data2: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  try {
+    data2 = JSON.parse(raw);
+  } catch {
+    // JSON이 앞뒤로 주석/표현이 섞인 경우 첫 { 부터 마지막 } 까지 잘라 재시도
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      try { data2 = JSON.parse(raw.slice(start, end + 1)); } catch {
+        return Response.json({ error: 'Parse error', details: raw.slice(0, 200) + '...' }, { status: 502 });
+      }
+    } else {
+      return Response.json({ error: 'Parse error', details: raw.slice(0, 200) + '...' }, { status: 502 });
+    }
   }
 
-  type KakaoDoc = {
-    title: string;
-    authors: string[];
-    publisher: string;
-    datetime: string;
-    isbn: string;
-    thumbnail?: string;
-    url?: string;
-  };
-  type KakaoResp = { documents: KakaoDoc[]; meta: { is_end: boolean } };
-
-  const data = (await res.json()) as KakaoResp;
-
-  const items: BookItem[] = data.documents.map((d) => {
-    const isbn13Match = (d.isbn || '').match(/\b(\d{13})\b/); // 13자리 연속 숫자
-    const thumb = d.thumbnail && d.thumbnail.trim() !== '' ? d.thumbnail : null; // 해상도 보장은 문서에 없음(확실하지 않음)
-    const surl = d.url && d.url.trim() !== '' ? d.url : null;
+  // 가능한 배열 위치들을 탐색
+  let arr: any[] = [];
+  if (Array.isArray(data2?.item)) arr = data2.item;
+  else if (Array.isArray(data2?.items)) arr = data2.items;
+  else {
+    // 객체 값들 중 배열인 첫 후보 선택
+    const candidate = Object.values(data2 || {}).find((v: any) => Array.isArray(v));
+    if (Array.isArray(candidate)) arr = candidate as any[];
+  }
+  const total: number = Number(data2?.totalResults ?? data2?.totalCount ?? 0);
+  const items: BookItem[] = arr.map((d) => {
+    const title: string = d.title ?? '';
+    const authorsText: string = d.author ?? '';
+    const authors: string[] = authorsText ? authorsText.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+    const publisher: string = d.publisher ?? '';
+    const publishedAt: string = d.pubDate ?? d.pubdate ?? ''; // 형식: yyyymmdd (ISO 아님)
+    const isbn13: string | null = d.isbn13 ? String(d.isbn13) : null;
+    const cover: string | null = d.cover && String(d.cover).trim() !== '' ? String(d.cover) : null;
+    const link: string | null = d.link && String(d.link).trim() !== '' ? String(d.link) : null;
     return {
-      title: d.title,
-      authors: Array.isArray(d.authors) ? d.authors : [],
-      publisher: d.publisher ?? '',
-      publishedAt: d.datetime ?? '', // 클라이언트에서 일자만 필요하면 slice(0,10) 권고
-      isbn: d.isbn ?? '',
-      isbn13: isbn13Match ? isbn13Match[1] : null,
-      thumbnail: thumb,
-      sourceUrl: surl
+      title,
+      authors,
+      publisher,
+      publishedAt,
+      isbn: String(d.isbn ?? isbn13 ?? ''),
+      isbn13,
+      thumbnail: cover,
+      sourceUrl: link
     };
   });
-
-  const body: BooksResponse = {
-    items,
-    isEnd: !!data.meta?.is_end,
-    page,
-    size,
-    query
-  };
-
+  const isEnd = page * size >= Math.min(total, 200); // 알라딘은 총 200까지만 검색 가능
+  const body: BooksResponse = { items, isEnd, page, size, query };
   return Response.json(body);
 }
 
