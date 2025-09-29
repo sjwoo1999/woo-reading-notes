@@ -33,7 +33,6 @@ export default function RootLayout({
             <nav style={{display:'flex',gap:'8px'}}>
               <a className="vintage-link" href="/library">라이브러리</a>
               <a className="vintage-link" href="/graph">그래프</a>
-              <a className="vintage-link" href="/capture">빠른 기록</a>
               <a className="vintage-link" href="/tags">태그</a>
               <a className="vintage-link" href="/settings">설정</a>
               <AuthLink />
