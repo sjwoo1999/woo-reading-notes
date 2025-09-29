@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
-import { restHeadersWithSession, restUrl } from '@/lib/supabase-rest';
-import { supabaseServer } from '@/lib/supabase/server';
+import { restHeaders, restUrl } from '@/lib/supabase-rest';
 
 type EdgeKind = 'tags' | 'entities' | 'direct' | 'mix';
 
@@ -14,12 +13,8 @@ export async function GET(req: NextRequest) {
   const gamma = Number(sp.get('gamma') ?? '2');
   const minWeight = Number(sp.get('minWeight') ?? '1');
 
-  const sb = await supabaseServer();
-  const { data: { session } } = await sb.auth.getSession();
-  console.log('[graph] session', !!session, session?.user?.id);
-  console.log('[graph] params', { includeTags, includeEntities, includeDirect, alpha, beta, gamma, minWeight });
-  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  const headers = restHeadersWithSession(session.access_token);
+  console.log('[graph] public params', { includeTags, includeEntities, includeDirect, alpha, beta, gamma, minWeight });
+  const headers = restHeaders();
 
   const edges = new Map<string, { a: string; b: string; wtTags: number; wtEntities: number; wtDirect: number }>();
   function pushEdge(a: string, b: string, kind: EdgeKind, inc = 1) {
