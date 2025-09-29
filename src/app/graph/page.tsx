@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import CytoscapeComponent from 'react-cytoscapejs';
 import { useRouter } from 'next/navigation';
 
@@ -17,47 +17,49 @@ export default function GraphPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const cyRef = useRef<any>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   async function renderGraph() {
     setLoading(true); setError(null);
     try {
+      // Cancel previous request if it is still in-flight
+      if (abortRef.current) abortRef.current.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
       const params = new URLSearchParams({
         minWeight: String(minWeight),
         tags: String(tags), entities: String(entities), direct: String(direct),
         alpha: String(alpha), beta: String(beta), gamma: String(gamma)
       });
-      const res = await fetch(`/api/graph?${params.toString()}`);
+      const res = await fetch(`/api/graph?${params.toString()}` , { signal: controller.signal });
       const json = await res.json();
-      if (!res.ok) throw new Error(json.error || 'Failed');
+      if (!res.ok) throw new Error(json.error || (res.status === 401 ? '로그인이 필요합니다.' : 'Failed'));
       setData({ nodes: json.nodes || [], edges: json.edges || [] });
     } catch (e: any) {
-      setError(e.message);
+      if (e?.name === 'AbortError') {
+        return; // Swallow aborted requests
+      }
+      setError(e?.message || '오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
   }
 
+  // Auto-render on mount and when filters change (debounced)
+  useEffect(() => {
+    const t = setTimeout(() => {
+      renderGraph();
+    }, 300);
+    return () => {
+      clearTimeout(t);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [minWeight, tags, entities, direct, alpha, beta, gamma]);
+
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">그래프</h1>
-      <div className="vintage-card p-4 v-stack">
-        <div className="h-stack" style={{flexWrap:'wrap'}}>
-          <label className="h-stack">
-            <input type="checkbox" checked={tags} onChange={(e)=>setTags(e.target.checked)} /> <span>Tags</span>
-          </label>
-          <label className="h-stack">
-            <input type="checkbox" checked={entities} onChange={(e)=>setEntities(e.target.checked)} /> <span>Entities</span>
-          </label>
-          <label className="h-stack">
-            <input type="checkbox" checked={direct} onChange={(e)=>setDirect(e.target.checked)} /> <span>Direct</span>
-          </label>
-          <label className="h-stack">α<input className="vintage-input" style={{width:64}} type="number" value={alpha} onChange={(e)=>setAlpha(Number(e.target.value))} /></label>
-          <label className="h-stack">β<input className="vintage-input" style={{width:64}} type="number" value={beta} onChange={(e)=>setBeta(Number(e.target.value))} /></label>
-          <label className="h-stack">γ<input className="vintage-input" style={{width:64}} type="number" value={gamma} onChange={(e)=>setGamma(Number(e.target.value))} /></label>
-          <label className="h-stack">min<input className="vintage-input" style={{width:64}} type="number" value={minWeight} onChange={(e)=>setMinWeight(Number(e.target.value))} /></label>
-          <button className="vintage-button" onClick={renderGraph}>{loading ? '불러오는 중…' : 'Render'}</button>
-        </div>
-      </div>
+      {loading ? <div className="text-sm opacity-70">불러오는 중…</div> : null}
 
       {error ? <div className="vintage-card p-3" style={{color:'#b00'}}>오류: {error}</div> : null}
       {data && (data.nodes.length === 0 && data.edges.length === 0) ? (
