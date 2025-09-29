@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
-import { restHeaders, restUrl } from '@/lib/supabase-rest';
+import { restHeadersWithSession, restUrl } from '@/lib/supabase-rest';
+import { supabaseServer } from '@/lib/supabase/server';
 
 type EdgeKind = 'tags' | 'entities' | 'direct' | 'mix';
 
@@ -13,7 +14,12 @@ export async function GET(req: NextRequest) {
   const gamma = Number(sp.get('gamma') ?? '2');
   const minWeight = Number(sp.get('minWeight') ?? '1');
 
-  const headers = restHeaders();
+  const sb = await supabaseServer();
+  const { data: { session } } = await sb.auth.getSession();
+  console.log('[graph] session', !!session, session?.user?.id);
+  console.log('[graph] params', { includeTags, includeEntities, includeDirect, alpha, beta, gamma, minWeight });
+  if (!session) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  const headers = restHeadersWithSession(session.access_token);
 
   const edges = new Map<string, { a: string; b: string; wtTags: number; wtEntities: number; wtDirect: number }>();
   function pushEdge(a: string, b: string, kind: EdgeKind, inc = 1) {
@@ -30,7 +36,8 @@ export async function GET(req: NextRequest) {
   // Shared tags
   if (includeTags) {
     const bt = await fetch(restUrl('book_tags', { select: 'book_id,tag_id', limit: '2000' }), { headers, cache: 'no-store' });
-    if (!bt.ok) return Response.json({ error: await bt.text() }, { status: 400 });
+    console.log('[graph] fetch book_tags', bt.status);
+    if (!bt.ok) return Response.json({ error: await bt.text() }, { status: bt.status });
     const rows: { book_id: string; tag_id: string }[] = await bt.json();
     const tagToBooks = new Map<string, string[]>();
     for (const r of rows) {
@@ -48,7 +55,8 @@ export async function GET(req: NextRequest) {
   // Shared entities via links (book -> entity)
   if (includeEntities) {
     const le = await fetch(restUrl('links', { select: 'src_type,src_id,dst_type,dst_id', limit: '5000' }), { headers, cache: 'no-store' });
-    if (!le.ok) return Response.json({ error: await le.text() }, { status: 400 });
+    console.log('[graph] fetch links(entities)', le.status);
+    if (!le.ok) return Response.json({ error: await le.text() }, { status: le.status });
     const rows: { src_type: string; src_id: string; dst_type: string; dst_id: string }[] = await le.json();
     const entityToBooks = new Map<string, string[]>();
     for (const r of rows) {
@@ -68,7 +76,8 @@ export async function GET(req: NextRequest) {
   // Direct links book<->book
   if (includeDirect) {
     const dl = await fetch(restUrl('links', { select: 'src_type,src_id,dst_type,dst_id', limit: '5000' }), { headers, cache: 'no-store' });
-    if (!dl.ok) return Response.json({ error: await dl.text() }, { status: 400 });
+    console.log('[graph] fetch links(direct)', dl.status);
+    if (!dl.ok) return Response.json({ error: await dl.text() }, { status: dl.status });
     const rows: { src_type: string; src_id: string; dst_type: string; dst_id: string }[] = await dl.json();
     for (const r of rows) {
       if (r.src_type === 'book' && r.dst_type === 'book') pushEdge(r.src_id, r.dst_id, 'direct', 1);
@@ -89,14 +98,32 @@ export async function GET(req: NextRequest) {
 
   // Fetch book labels
   const ids = Array.from(nodeIds);
-  const nodes = [] as { data: { id: string; label: string; type: 'book'; rating?: number | null } }[];
+  const nodes = [] as { data: { id: string; label: string; type: 'book'; rating?: number | null; cover?: string | null } }[];
   if (ids.length > 0) {
-    const url = restUrl('books', { select: 'id,title,rating', id: `in.(${ids.join(',')})` });
+    const url = restUrl('books', { select: 'id,title,rating,thumbnail_url', id: `in.(${ids.join(',')})` });
     const r = await fetch(url, { headers, cache: 'no-store' });
-    if (!r.ok) return Response.json({ error: await r.text() }, { status: 400 });
-    const rows: { id: string; title: string; rating?: number | null }[] = await r.json();
-    for (const b of rows) nodes.push({ data: { id: b.id, label: b.title, type: 'book', rating: b.rating ?? null } });
+    console.log('[graph] fetch books(labels)', r.status, url);
+    if (!r.ok) return Response.json({ error: await r.text() }, { status: r.status });
+    const rows: { id: string; title: string; rating?: number | null; thumbnail_url?: string | null }[] = await r.json();
+    for (const b of rows) nodes.push({ data: { id: b.id, label: b.title, type: 'book', rating: b.rating ?? null, cover: b.thumbnail_url ?? null } });
   }
+
+  // If too few nodes, add recent books as isolated nodes to avoid empty screen
+  if (nodes.length < 5) {
+    const recentUrl = restUrl('books', { select: 'id,title,rating,thumbnail_url', order: 'updated_at.desc', limit: '50' });
+    const rr = await fetch(recentUrl, { headers, cache: 'no-store' });
+    console.log('[graph] fetch books(recent)', rr.status, recentUrl);
+    if (rr.ok) {
+      const rows: { id: string; title: string; rating?: number | null; thumbnail_url?: string | null }[] = await rr.json();
+      const existing = new Set(nodes.map(n => n.data.id));
+      for (const b of rows) {
+        if (!existing.has(b.id)) nodes.push({ data: { id: b.id, label: b.title, type: 'book', rating: b.rating ?? null, cover: b.thumbnail_url ?? null } });
+        if (nodes.length >= 50) break;
+      }
+    }
+  }
+
+  console.log('[graph] nodes/edges', nodes.length, edgeList.length, 'ids', ids.length);
 
   // Cap sizes
   const cappedNodes = nodes.slice(0, 200);

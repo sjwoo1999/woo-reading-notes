@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
+import CytoscapeComponent from 'react-cytoscapejs';
+import { useRouter } from 'next/navigation';
 
 export default function GraphPage() {
   const [minWeight, setMinWeight] = useState(1);
@@ -13,6 +15,8 @@ export default function GraphPage() {
   const [data, setData] = useState<{ nodes: any[]; edges: any[] } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const cyRef = useRef<any>(null);
 
   async function renderGraph() {
     setLoading(true); setError(null);
@@ -61,15 +65,20 @@ export default function GraphPage() {
       ) : null}
 
       {data ? (
-        <div className="vintage-card p-4">
-          <div className="text-sm opacity-70 mb-2">Nodes: {data.nodes.length} · Edges: {data.edges.length}</div>
-          <ul className="grid gap-2">
-            {data.edges.map((e) => (
-              <li key={e.data.id} className="text-sm">
-                {e.data.source} — {e.data.target} (w={e.data.weight}, {e.data.kind})
-              </li>
-            ))}
-          </ul>
+        <div className="vintage-card p-2" style={{height:520}}>
+          <div className="text-sm opacity-70 mb-2 px-2">Nodes: {data.nodes.length} · Edges: {data.edges.length}</div>
+          <CytoscapeComponent
+            cy={(cy)=>{ cyRef.current = cy; cy.on('tap', 'node', (evt)=>{ const id = evt.target.id(); router.push(`/book/${id}`); }); cy.on('tap', (e)=>{ if (e.target === cy) cy.elements().unselect(); }); }}
+            elements={[...data.nodes, ...data.edges] as any}
+            style={{ width: '100%', height: '100%' }}
+            layout={{ name: 'cose', animate: true }}
+            stylesheet={[
+              { selector: 'node', style: { 'shape': 'ellipse', 'width': 72, 'height': 72, 'background-fit': 'cover', 'background-image': 'data(cover)', 'border-width': 1, 'border-color': '#D7C9A7' } },
+              { selector: 'node:selected', style: { 'overlay-opacity': 0.1, 'overlay-color': '#3B4E76' } },
+              { selector: 'edge', style: { 'line-color': '#999', 'opacity': 0.6, 'width': 'mapData(weight, 1, 10, 1, 6)', 'curve-style': 'bezier' } },
+              { selector: 'edge:selected', style: { 'line-color': '#3B4E76', 'opacity': 0.9 } },
+            ]}
+          />
         </div>
       ) : null}
     </div>

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import { supabaseBrowser } from "@/lib/supabase/client";
 import { z } from "zod";
 
 type SearchPick = {
@@ -140,6 +141,14 @@ export default function NewBookWizard() {
       return;
     }
     try {
+      // Use session token so RLS associates rows with the logged-in user
+      const sb = supabaseBrowser();
+      const { data: sess } = await sb.auth.getSession();
+      const accessToken = sess.session?.access_token;
+      if (!accessToken) {
+        setSubmitMsg('로그인 후 다시 시도하세요.');
+        return;
+      }
       const base = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
       const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
 
@@ -154,10 +163,10 @@ export default function NewBookWizard() {
         isbn: form.isbn13 || (pick?.isbn || null),
         rating: form.rating ?? null,
         progress: form.progress ?? null,
-        summary: form.feelings || null
-        // thumbnail은 스키마에 없음(확실하지 않음)
+        summary: form.feelings || null,
+        thumbnail_url: form.thumbnail || null
       };
-      const bRes = await fetch(`${base}/rest/v1/books`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify(bookPayload) });
+      const bRes = await fetch(`${base}/rest/v1/books`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify(bookPayload) });
       if (!bRes.ok) throw new Error(await bRes.text());
       const bJson = await bRes.json();
       const bookId = Array.isArray(bJson) ? bJson[0]?.id : bJson?.id;
@@ -165,28 +174,28 @@ export default function NewBookWizard() {
 
       // optional note
       if (form.note && form.note.trim()) {
-        await fetch(`${base}/rest/v1/notes`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify({ book_id: bookId, title: '메모', content: form.note }) });
+        await fetch(`${base}/rest/v1/notes`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify({ book_id: bookId, title: '메모', content: form.note }) });
       }
 
       // tags upsert
       const tags = (form.tagsText || "").split(",").map(t => t.trim()).filter(Boolean);
       for (const name of tags) {
         // try get
-        const getRes = await fetch(`${base}/rest/v1/tags?select=id,name&name=eq.${encodeURIComponent(name)}`, { headers: { apikey: key, Authorization: `Bearer ${key}` } });
+        const getRes = await fetch(`${base}/rest/v1/tags?select=id,name&name=eq.${encodeURIComponent(name)}`, { headers: { apikey: key, Authorization: `Bearer ${accessToken}` } });
         let tagId: string | null = null;
         if (getRes.ok) {
           const rows = await getRes.json();
           if (Array.isArray(rows) && rows[0]?.id) tagId = rows[0].id;
         }
         if (!tagId) {
-          const ins = await fetch(`${base}/rest/v1/tags`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify({ name }) });
+          const ins = await fetch(`${base}/rest/v1/tags`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json', Prefer: 'return=representation' }, body: JSON.stringify({ name }) });
           if (ins.ok) {
             const rows = await ins.json();
             tagId = Array.isArray(rows) ? rows[0]?.id : rows?.id;
           }
         }
         if (tagId) {
-          await fetch(`${base}/rest/v1/book_tags`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ book_id: bookId, tag_id: tagId }) });
+          await fetch(`${base}/rest/v1/book_tags`, { method: 'POST', headers: { apikey: key, Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ book_id: bookId, tag_id: tagId }) });
         }
       }
 

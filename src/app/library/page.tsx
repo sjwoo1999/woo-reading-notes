@@ -1,4 +1,5 @@
 import GuardedCreateButton from './GuardedCreateButton';
+import Image from 'next/image';
 type Book = {
   id: string;
   title: string;
@@ -6,13 +7,14 @@ type Book = {
   rating?: number | null;
   updated_at?: string | null;
   isbn?: string | null;
+  thumbnail_url?: string | null;
 };
 
 async function fetchBooks(q?: string): Promise<Book[]> {
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL as string;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
   const params = new URLSearchParams();
-  params.set('select', 'id,title,author,rating,updated_at,isbn');
+  params.set('select', 'id,title,author,rating,updated_at,isbn,thumbnail_url');
   params.set('order', 'updated_at.desc');
   if (q && q.trim()) params.set('title', `ilike.*${q}*`);
 
@@ -65,11 +67,8 @@ export default async function LibraryPage({ searchParams }: { searchParams: Prom
             <li key={b.id} className="vintage-card p-3 v-stack">
               <a href={`/book/${b.id}`} className="block v-stack">
                 <div className="cover-7-10" aria-hidden>
-                  {b.isbn ? (
-                    <img
-                      src={`https://covers.openlibrary.org/b/isbn/${b.isbn}-M.jpg`}
-                      alt=""
-                    />
+                  {b.thumbnail_url ? (
+                    <Image src={b.thumbnail_url} alt={`책 표지: ${b.title}`} fill sizes="180px" style={{objectFit:'cover'}} />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-xs opacity-60">No Cover</div>
                   )}

@@ -16,3 +16,12 @@ export function restUrl(table: string, qs?: Record<string, string | undefined>) 
   const search = params.toString();
   return `${base}/rest/v1/${table}${search ? `?${search}` : ''}`;
 }
+
+export function restHeadersWithSession(accessToken: string) {
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string;
+  return {
+    apikey: key,
+    Authorization: `Bearer ${accessToken}`,
+    'Content-Type': 'application/json'
+  } as Record<string, string>;
+}
