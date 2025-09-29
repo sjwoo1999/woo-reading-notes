@@ -42,5 +42,5 @@ body {
 .vintage-link { text-decoration: underline; text-underline-offset: 2px; }
 .v-stack { display: flex; flex-direction: column; gap: 8px; }
 .h-stack { display: flex; align-items: center; gap: 8px; }
-.cover-7-10 { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; aspect-ratio: 7/10; background: rgba(0,0,0,0.03); }
+.cover-7-10 { position: relative; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; aspect-ratio: 7/10; background: rgba(0,0,0,0.03); }
 .cover-7-10 > img { width: 100%; height: 100%; object-fit: cover; display: block; }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from 'react';
+import Image from 'next/image';
 
 type BookItem = {
   title: string;
@@ -45,16 +46,22 @@ export default function BooksSearchPage() {
       <div className="vintage-card p-4">
         <table className="text-sm w-full">
           <thead>
-            <tr><th className="text-left">제목</th><th className="text-left">저자</th><th className="text-left">출판사</th><th className="text-left">출간일</th><th className="text-left">ISBN13</th></tr>
+            <tr><th className="text-left">표지</th><th className="text-left">제목</th><th className="text-left">저자</th><th className="text-left">출판사</th><th className="text-left">출간일</th></tr>
           </thead>
           <tbody>
             {items.map((b) => (
               <tr key={b.isbn}>
+                <td style={{width:70}}>
+                  {b.thumbnail ? (
+                    <Image src={b.thumbnail} alt={`책 표지: ${b.title}`} width={60} height={86} style={{objectFit:'cover', border:'1px solid rgba(0,0,0,.06)', borderRadius:6, background:'var(--paper, #f9f7f2)'}} />
+                  ) : (
+                    <div aria-hidden="true" style={{width:60, height:86, border:'1px solid rgba(0,0,0,.06)', borderRadius:6, background:'var(--paper, #f9f7f2)'}} />
+                  )}
+                </td>
                 <td><a className="vintage-link" href={b.sourceUrl || '#'} target="_blank" rel="noreferrer">{b.title}</a></td>
                 <td>{b.authors.join(', ')}</td>
                 <td>{b.publisher}</td>
                 <td>{b.publishedAt}</td>
-                <td>{b.isbn13 || '-'}</td>
               </tr>
             ))}
           </tbody>
