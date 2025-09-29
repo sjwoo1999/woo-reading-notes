@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import CytoscapeComponent from 'react-cytoscapejs';
 import { useRouter } from 'next/navigation';
 
@@ -19,6 +19,17 @@ export default function GraphPage() {
   const cyRef = useRef<any>(null);
   const abortRef = useRef<AbortController | null>(null);
   const [isSample, setIsSample] = useState(false);
+
+  // Cleanup cytoscape and in-flight requests on unmount
+  useEffect(() => {
+    return () => {
+      try { cyRef.current?.off('tap'); } catch {}
+      try { cyRef.current?.destroy?.(); } catch {}
+      cyRef.current = null;
+      try { abortRef.current?.abort(); } catch {}
+      abortRef.current = null;
+    };
+  }, []);
 
   function getSampleGraph(): { nodes: any[]; edges: any[] } {
     const covers = ['/globe.svg', '/next.svg', '/vercel.svg', '/window.svg', '/file.svg'];
@@ -87,6 +98,12 @@ export default function GraphPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [minWeight, tags, entities, direct, alpha, beta, gamma]);
 
+  // Always compute elements via hook (do not call hooks conditionally)
+  const elements = useMemo(() => {
+    if (!data) return [] as any;
+    return ([...data.nodes, ...data.edges] as any);
+  }, [data]);
+
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">그래프</h1>
@@ -107,8 +124,28 @@ export default function GraphPage() {
         <div className="vintage-card p-2" style={{height:520}}>
           <div className="text-sm opacity-70 mb-2 px-2">Nodes: {data.nodes.length} · Edges: {data.edges.length}</div>
           <CytoscapeComponent
-            cy={(cy)=>{ cyRef.current = cy; cy.on('tap', 'node', (evt)=>{ const id = evt.target.id(); if (isSample || (typeof id === 'string' && id.startsWith('demo-'))) { return; } router.push(`/book/${id}`); }); cy.on('tap', (e)=>{ if (e.target === cy) cy.elements().unselect(); }); }}
-            elements={[...data.nodes, ...data.edges] as any}
+            key={isSample ? 'sample' : 'live'}
+            cy={(cy)=>{
+              if (!cy) return;
+              cyRef.current = cy;
+              cy.off('tap');
+              const uuidLike = /^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$/;
+              cy.on('tap', 'node', (evt)=>{
+                const id = evt.target.id();
+                if (isSample || (typeof id === 'string' && id.startsWith('demo-'))) return;
+                if (typeof id === 'string' && uuidLike.test(id)) {
+                  // Defer navigation to next tick to avoid dev-overlay race
+                  setTimeout(() => {
+                    try {
+                      // Use hard navigation to avoid SPA/dev overlay races
+                      window.location.href = `/book/${id}`;
+                    } catch {}
+                  }, 0);
+                }
+              });
+              cy.on('tap', (e)=>{ if (e.target === cy) cy.elements().unselect(); });
+            }}
+            elements={elements}
             style={{ width: '100%', height: '100%' }}
             layout={{ name: 'cose', animate: true }}
             stylesheet={[
