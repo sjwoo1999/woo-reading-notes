@@ -4,6 +4,7 @@ import { useRef, useState, useEffect } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { z } from 'zod';
 import WikiLinkAutocomplete from './WikiLinkAutocomplete';
+import { extractWikiLinks, findMatchingNote } from '@/lib/utils/wikiLinkParser';
 
 type NoteType = 'book' | 'concept' | 'quote';
 
@@ -50,6 +51,58 @@ export default function NoteForm({ onSuccess, initialData }: NoteFormProps) {
   const [wikiLinkQuery, setWikiLinkQuery] = useState('');
   const [showWikiLinkAutocomplete, setShowWikiLinkAutocomplete] = useState(false);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  // Wiki link highlighting state
+  const [availableNotesTitles, setAvailableNotesTitles] = useState<string[]>([]);
+  const [detectedWikiLinks, setDetectedWikiLinks] = useState<
+    Array<{ text: string; displayText: string; isValid: boolean }>
+  >([]);
+
+  // Fetch available notes for wiki link highlighting
+  useEffect(() => {
+    async function fetchAvailableNotes() {
+      try {
+        const sb = supabaseBrowser();
+        const { data: sess } = await sb.auth.getSession();
+        const accessToken = sess.session?.access_token;
+        if (!accessToken) {
+          setAvailableNotesTitles([]);
+          return;
+        }
+
+        const res = await fetch('/api/notes', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const titles = (data.notes || []).map((n: any) => n.title);
+          setAvailableNotesTitles(titles);
+        }
+      } catch {
+        setAvailableNotesTitles([]);
+      }
+    }
+
+    fetchAvailableNotes();
+  }, []);
+
+  // Update detected wiki links when content changes
+  useEffect(() => {
+    if (!form.content) {
+      setDetectedWikiLinks([]);
+      return;
+    }
+
+    const wikiLinks = extractWikiLinks(form.content);
+    const detected = wikiLinks.map((link) => ({
+      text: link.text,
+      displayText: link.displayText,
+      isValid: availableNotesTitles.length > 0 && findMatchingNote(link.text, availableNotesTitles) !== null,
+    }));
+
+    setDetectedWikiLinks(detected);
+  }, [form.content, availableNotesTitles]);
 
   // Fetch tag suggestions
   useEffect(() => {
@@ -240,6 +293,58 @@ export default function NoteForm({ onSuccess, initialData }: NoteFormProps) {
       }
 
       const created = await res.json();
+
+      // Auto-generate links from wiki links in content
+      if (form.content) {
+        try {
+          // Extract wiki links from content
+          const wikiLinks = extractWikiLinks(form.content);
+
+          if (wikiLinks.length > 0) {
+            // Fetch all notes to find matches
+            const notesRes = await fetch('/api/notes', {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            });
+
+            if (notesRes.ok) {
+              const notesData = await notesRes.json();
+              const allNotes = notesData.notes || [];
+              const availableTitles = allNotes.map((n: any) => n.title);
+
+              // For each wiki link, find matching note and create link
+              for (const wikiLink of wikiLinks) {
+                const matchedTitle = findMatchingNote(wikiLink.text, availableTitles);
+
+                if (matchedTitle) {
+                  const targetNote = allNotes.find((n: any) => n.title === matchedTitle);
+
+                  if (targetNote && targetNote.id !== created.id) {
+                    // Create link from this note to the target note
+                    await fetch('/api/links', {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${accessToken}`,
+                      },
+                      body: JSON.stringify({
+                        source_note_id: created.id,
+                        target_note_id: targetNote.id,
+                        relationship_type: 'relates_to',
+                      }),
+                    }).catch(() => {
+                      // Silently ignore link creation errors (e.g., duplicates)
+                    });
+                  }
+                }
+              }
+            }
+          }
+        } catch (linkError: any) {
+          // Log link creation errors but don't block note creation
+          console.warn('자동 링크 생성 실패:', linkError);
+        }
+      }
+
       setSubmitMsg('✓ 노트가 생성되었습니다');
 
       // Reset form
@@ -332,6 +437,40 @@ export default function NoteForm({ onSuccess, initialData }: NoteFormProps) {
               onSelect={handleWikiLinkSelect}
               onClose={() => setShowWikiLinkAutocomplete(false)}
             />
+
+            {/* Wiki Link Highlighting Indicator */}
+            {detectedWikiLinks.length > 0 && (
+              <div
+                className="vintage-card"
+                style={{
+                  marginTop: '8px',
+                  padding: '8px 12px',
+                  fontSize: '12px',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                }}
+              >
+                {detectedWikiLinks.map((link, idx) => (
+                  <span
+                    key={`${idx}-${link.text}`}
+                    style={{
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      background: link.isValid
+                        ? 'rgba(59, 78, 118, 0.1)'
+                        : 'rgba(166, 124, 82, 0.1)',
+                      color: link.isValid ? '#3B4E76' : '#A67C52',
+                      border: `1px solid ${link.isValid ? '#3B4E76' : '#A67C52'}`,
+                      fontWeight: 500,
+                    }}
+                  >
+                    <span>{link.isValid ? '✓ ' : '? '}</span>
+                    {link.displayText}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </label>
 
