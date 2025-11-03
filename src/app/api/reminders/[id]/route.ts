@@ -8,10 +8,7 @@ const supabase = createClient(
 
 // PATCH /api/reminders/[id]
 // Update reminder status (mark as reviewed, dismissed, etc.)
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
 
@@ -74,7 +71,8 @@ export async function PATCH(
     // Prepare update data
     const updateData: any = {
       status: status || currentReminder.status,
-      last_reviewed_at: status === 'completed' ? new Date().toISOString() : currentReminder.last_reviewed_at,
+      last_reviewed_at:
+        status === 'completed' ? new Date().toISOString() : currentReminder.last_reviewed_at,
     };
 
     if (interval_level !== undefined) {
@@ -83,17 +81,15 @@ export async function PATCH(
 
     // Create new reminder if moving to next interval
     if (status === 'completed' && nextScheduledAt && nextIntervalLevel !== undefined) {
-      const { error: createError } = await supabase
-        .from('reminders')
-        .insert([
-          {
-            user_id: user.id,
-            note_id: currentReminder.note_id,
-            interval_level: nextIntervalLevel,
-            scheduled_at: nextScheduledAt,
-            status: 'pending',
-          },
-        ]);
+      const { error: createError } = await supabase.from('reminders').insert([
+        {
+          user_id: user.id,
+          note_id: currentReminder.note_id,
+          interval_level: nextIntervalLevel,
+          scheduled_at: nextScheduledAt,
+          status: 'pending',
+        },
+      ]);
 
       if (createError) {
         console.error('Failed to create next reminder:', createError);
@@ -112,10 +108,7 @@ export async function PATCH(
 
     if (updateError) {
       console.error('Database error:', updateError);
-      return NextResponse.json(
-        { error: 'Failed to update reminder' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to update reminder' }, { status: 500 });
     }
 
     return NextResponse.json(updatedReminder);
@@ -127,10 +120,7 @@ export async function PATCH(
 
 // DELETE /api/reminders/[id]
 // Delete a reminder
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
 
@@ -153,18 +143,11 @@ export async function DELETE(
     }
 
     // Delete reminder
-    const { error } = await supabase
-      .from('reminders')
-      .delete()
-      .eq('id', id)
-      .eq('user_id', user.id);
+    const { error } = await supabase.from('reminders').delete().eq('id', id).eq('user_id', user.id);
 
     if (error) {
       console.error('Database error:', error);
-      return NextResponse.json(
-        { error: 'Failed to delete reminder' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to delete reminder' }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });

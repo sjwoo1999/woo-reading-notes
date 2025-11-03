@@ -201,7 +201,10 @@ export default function ReviewPage() {
 
       {/* Reviewing card */}
       {reviewingId && reminders.find((r) => r.id === reviewingId) && (
-        <div className="vintage-card p-4 v-stack" style={{ gap: 12, background: 'rgba(59, 78, 118, 0.05)' }}>
+        <div
+          className="vintage-card p-4 v-stack"
+          style={{ gap: 12, background: 'rgba(59, 78, 118, 0.05)' }}
+        >
           <div className="text-sm font-medium opacity-70">현재 복습 중</div>
           <div className="h-stack" style={{ alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 16 }}>
@@ -211,7 +214,9 @@ export default function ReviewPage() {
                   ? '💡'
                   : '✨'}
             </span>
-            <span className="font-medium">{reminders.find((r) => r.id === reviewingId)?.notes?.title}</span>
+            <span className="font-medium">
+              {reminders.find((r) => r.id === reviewingId)?.notes?.title}
+            </span>
           </div>
           <div
             className="vintage-card p-3"
@@ -264,7 +269,10 @@ export default function ReviewPage() {
               className="vintage-card p-4 v-stack hover:opacity-80 transition-opacity"
               style={{ cursor: 'pointer' }}
             >
-              <div className="h-stack" style={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+              <div
+                className="h-stack"
+                style={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}
+              >
                 <div className="h-stack" style={{ alignItems: 'center', gap: 8, flex: 1 }}>
                   <span style={{ fontSize: 16 }}>
                     {reminder.notes?.type === 'book'
@@ -276,7 +284,9 @@ export default function ReviewPage() {
                   <div className="v-stack" style={{ flex: 1, gap: 4 }}>
                     <h3 className="font-medium">{reminder.notes?.title || '(제목 없음)'}</h3>
                     <div className="h-stack" style={{ gap: 8, fontSize: 12, opacity: 0.7 }}>
-                      <span>복습 단계: {INTERVAL_LABELS[reminder.interval_level] || '알 수 없음'}</span>
+                      <span>
+                        복습 단계: {INTERVAL_LABELS[reminder.interval_level] || '알 수 없음'}
+                      </span>
                       {reminder.last_reviewed_at && (
                         <span>
                           마지막 복습:{' '}

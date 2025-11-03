@@ -98,7 +98,9 @@ export default function NoteForm({ onSuccess, initialData }: NoteFormProps) {
     const detected = wikiLinks.map((link) => ({
       text: link.text,
       displayText: link.displayText,
-      isValid: availableNotesTitles.length > 0 && findMatchingNote(link.text, availableNotesTitles) !== null,
+      isValid:
+        availableNotesTitles.length > 0 &&
+        findMatchingNote(link.text, availableNotesTitles) !== null,
     }));
 
     setDetectedWikiLinks(detected);

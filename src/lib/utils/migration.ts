@@ -77,9 +77,8 @@ export function migrateReminder(reminder: any): any {
     ...reminder,
     interval_level: intervalLevel,
     // Ensure status is valid
-    status:
-      ['pending', 'completed', 'dismissed'].includes(reminder.status) ?
-        reminder.status
+    status: ['pending', 'completed', 'dismissed'].includes(reminder.status)
+      ? reminder.status
       : 'pending',
   };
 }

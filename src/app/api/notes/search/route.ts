@@ -69,17 +69,11 @@ export async function GET(req: NextRequest) {
 
     // Validate query
     if (query.length === 0) {
-      return NextResponse.json(
-        { error: 'Search query is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Search query is required' }, { status: 400 });
     }
 
     if (query.length < 1) {
-      return NextResponse.json(
-        { error: 'Query must be at least 1 character' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Query must be at least 1 character' }, { status: 400 });
     }
 
     // Validate sort parameter
@@ -117,10 +111,7 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error('Database error:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch notes' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to fetch notes' }, { status: 500 });
     }
 
     if (!allNotes || allNotes.length === 0) {
@@ -147,7 +138,9 @@ export async function GET(req: NextRequest) {
       // Filter by tags if provided
       if (tags.length > 0) {
         const noteTags = (note.tags || []) as string[];
-        const hasAllTags = tags.every((tag) => noteTags.some((t) => t.toLowerCase() === tag.toLowerCase()));
+        const hasAllTags = tags.every((tag) =>
+          noteTags.some((t) => t.toLowerCase() === tag.toLowerCase())
+        );
         if (!hasAllTags) return false;
       }
 
@@ -155,7 +148,7 @@ export async function GET(req: NextRequest) {
     });
 
     // Calculate relevance score for sorting
-    const withScores: (typeof filteredNotes[0] & { relevance_score: number })[] =
+    const withScores: ((typeof filteredNotes)[0] & { relevance_score: number })[] =
       filteredNotes.map((note) => {
         let score = 0;
 

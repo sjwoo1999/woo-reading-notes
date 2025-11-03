@@ -179,7 +179,8 @@ export default function SearchPage() {
                     flex: 1,
                     background: typeFilter === type ? 'var(--accent)' : 'rgba(255,255,255,0.6)',
                     color: typeFilter === type ? '#fff' : 'var(--ink)',
-                    border: typeFilter === type ? '1px solid var(--accent)' : '1px solid var(--line)',
+                    border:
+                      typeFilter === type ? '1px solid var(--accent)' : '1px solid var(--line)',
                   }}
                 >
                   {type === 'book' && '📚 책'}
@@ -374,7 +375,8 @@ export default function SearchPage() {
                         {result.preview}
                       </p>
                       <div className="h-stack" style={{ gap: 8, flexWrap: 'wrap' }}>
-                        {result.tags && result.tags.length > 0 && (
+                        {result.tags &&
+                          result.tags.length > 0 &&
                           result.tags.map((tag) => (
                             <span
                               key={tag}
@@ -388,8 +390,7 @@ export default function SearchPage() {
                             >
                               {tag}
                             </span>
-                          ))
-                        )}
+                          ))}
                         <span className="text-xs opacity-50">{formatDate(result.updated_at)}</span>
                       </div>
                     </div>
@@ -427,8 +428,7 @@ export default function SearchPage() {
               </button>
 
               {Array.from({ length: Math.min(5, results.total_pages) }, (_, i) => {
-                const pageNum =
-                  results.total_pages <= 5 ? i + 1 : Math.max(1, page - 2) + i;
+                const pageNum = results.total_pages <= 5 ? i + 1 : Math.max(1, page - 2) + i;
                 if (pageNum > results.total_pages) return null;
                 return (
                   <button

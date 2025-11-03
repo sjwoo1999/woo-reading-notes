@@ -96,13 +96,7 @@ export default function EditNoteForm({ noteId }: EditNoteFormProps) {
 }
 
 // Edit form component that handles update requests
-function NoteFormEdit({
-  noteId,
-  initialData,
-}: {
-  noteId: string;
-  initialData: Note;
-}) {
+function NoteFormEdit({ noteId, initialData }: { noteId: string; initialData: Note }) {
   const [submitMsg, setSubmitMsg] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({

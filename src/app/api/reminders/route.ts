@@ -35,7 +35,11 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get('status') || 'pending';
 
     // Get due reminders
-    const { data: reminders, error, count } = await supabase
+    const {
+      data: reminders,
+      error,
+      count,
+    } = await supabase
       .from('reminders')
       .select('*, notes(id, title, type, content)', { count: 'exact' })
       .eq('user_id', user.id)
@@ -46,10 +50,7 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       console.error('Database error:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch reminders' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'Failed to fetch reminders' }, { status: 500 });
     }
 
     return NextResponse.json({

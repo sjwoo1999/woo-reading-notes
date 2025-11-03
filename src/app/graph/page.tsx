@@ -149,7 +149,9 @@ export default function GraphPage() {
       ) : null}
       {data && data.nodes.length === 0 && data.edges.length === 0 ? (
         <div className="vintage-card p-4">
-          <div className="text-sm opacity-70">아직 노트가 없습니다. 새 노트를 만들어 시작하세요.</div>
+          <div className="text-sm opacity-70">
+            아직 노트가 없습니다. 새 노트를 만들어 시작하세요.
+          </div>
         </div>
       ) : null}
 
@@ -218,131 +220,136 @@ export default function GraphPage() {
             <div className="text-sm opacity-70 mb-2 px-2">
               노드: {data.nodes.length} · 간선: {data.edges.length}
             </div>
-          <CytoscapeComponent
-            key={isSample ? 'sample' : 'live'}
-            cy={(cy) => {
-              if (!cy) return;
-              cyRef.current = cy;
-              cy.off('tap');
-              const uuidLike =
-                /^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$/;
-              cy.on('tap', 'node', (evt) => {
-                const id = evt.target.id();
-                if (isSample || (typeof id === 'string' && id.startsWith('demo-'))) return;
-                if (typeof id === 'string' && uuidLike.test(id)) {
-                  // Defer navigation to next tick to avoid dev-overlay race
-                  setTimeout(() => {
-                    try {
-                      // Use hard navigation to avoid SPA/dev overlay races
-                      window.location.href = `/notes/${id}`;
-                    } catch {}
-                  }, 0);
-                }
-              });
-              cy.on('tap', (e) => {
-                if (e.target === cy) cy.elements().unselect();
-              });
-            }}
-            elements={elements}
-            style={{ width: '100%', height: '100%' }}
-            layout={{ name: 'cose', animate: true }}
-            stylesheet={[
-              // Base node style
-              {
-                selector: 'node',
-                style: {
-                  shape: 'circle',
-                  width: 50,
-                  height: 50,
-                  'background-color': '#E8E0D5',
-                  'border-width': 2,
-                  'border-color': '#999',
-                  label: 'data(label)',
-                  'text-valign': 'center',
-                  'text-halign': 'center',
-                  'font-size': 11,
-                  'font-weight': 'bold',
-                  'text-background-color': '#fff',
-                  'text-background-opacity': 0.8,
-                  'text-background-padding': '2px',
-                  'text-overflow-wrap': 'wrap',
-                  'text-max-width': 80,
-                  color: '#333',
+            <CytoscapeComponent
+              key={isSample ? 'sample' : 'live'}
+              cy={(cy) => {
+                if (!cy) return;
+                cyRef.current = cy;
+                cy.off('tap');
+                const uuidLike =
+                  /^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$/;
+                cy.on('tap', 'node', (evt) => {
+                  const id = evt.target.id();
+                  if (isSample || (typeof id === 'string' && id.startsWith('demo-'))) return;
+                  if (typeof id === 'string' && uuidLike.test(id)) {
+                    // Defer navigation to next tick to avoid dev-overlay race
+                    setTimeout(() => {
+                      try {
+                        // Use hard navigation to avoid SPA/dev overlay races
+                        window.location.href = `/notes/${id}`;
+                      } catch {}
+                    }, 0);
+                  }
+                });
+                cy.on('tap', (e) => {
+                  if (e.target === cy) cy.elements().unselect();
+                });
+              }}
+              elements={elements}
+              style={{ width: '100%', height: '100%' }}
+              layout={{ name: 'cose', animate: true }}
+              stylesheet={[
+                // Base node style
+                {
+                  selector: 'node',
+                  style: {
+                    shape: 'circle',
+                    width: 50,
+                    height: 50,
+                    'background-color': '#E8E0D5',
+                    'border-width': 2,
+                    'border-color': '#999',
+                    label: 'data(label)',
+                    'text-valign': 'center',
+                    'text-halign': 'center',
+                    'font-size': 11,
+                    'font-weight': 'bold',
+                    'text-background-color': '#fff',
+                    'text-background-opacity': 0.8,
+                    'text-background-padding': '2px',
+                    'text-overflow-wrap': 'wrap',
+                    'text-max-width': 80,
+                    color: '#333',
+                  },
                 },
-              },
-              // Book nodes - 📚
-              {
-                selector: 'node[type="book"]',
-                style: {
-                  'background-color': '#3B4E76',
-                  'border-color': '#2A3654',
-                  color: '#fff',
+                // Book nodes - 📚
+                {
+                  selector: 'node[type="book"]',
+                  style: {
+                    'background-color': '#3B4E76',
+                    'border-color': '#2A3654',
+                    color: '#fff',
+                  },
                 },
-              },
-              // Concept nodes - 💡
-              {
-                selector: 'node[type="concept"]',
-                style: {
-                  'background-color': '#D7A945',
-                  'border-color': '#B8860B',
-                  color: '#fff',
+                // Concept nodes - 💡
+                {
+                  selector: 'node[type="concept"]',
+                  style: {
+                    'background-color': '#D7A945',
+                    'border-color': '#B8860B',
+                    color: '#fff',
+                  },
                 },
-              },
-              // Quote nodes - ✨
-              {
-                selector: 'node[type="quote"]',
-                style: {
-                  'background-color': '#A67C52',
-                  'border-color': '#8B6F47',
-                  color: '#fff',
+                // Quote nodes - ✨
+                {
+                  selector: 'node[type="quote"]',
+                  style: {
+                    'background-color': '#A67C52',
+                    'border-color': '#8B6F47',
+                    color: '#fff',
+                  },
                 },
-              },
-              // Selected node
-              {
-                selector: 'node:selected',
-                style: {
-                  'overlay-opacity': 0.2,
-                  'overlay-color': '#3B4E76',
-                  'overlay-padding': '8px',
+                // Selected node
+                {
+                  selector: 'node:selected',
+                  style: {
+                    'overlay-opacity': 0.2,
+                    'overlay-color': '#3B4E76',
+                    'overlay-padding': '8px',
+                  },
                 },
-              },
-              // Edge styles
-              {
-                selector: 'edge',
-                style: {
-                  'line-color': '#999',
-                  opacity: 0.6,
-                  width: 2,
-                  'curve-style': 'bezier',
-                  'target-arrow-color': '#999',
-                  'target-arrow-shape': 'triangle',
-                  'arrow-scale': 0.8,
+                // Edge styles
+                {
+                  selector: 'edge',
+                  style: {
+                    'line-color': '#999',
+                    opacity: 0.6,
+                    width: 2,
+                    'curve-style': 'bezier',
+                    'target-arrow-color': '#999',
+                    'target-arrow-shape': 'triangle',
+                    'arrow-scale': 0.8,
+                  },
                 },
-              },
-              // Edge for different relationship types
-              {
-                selector: 'edge[relationship_type="supports"]',
-                style: { 'line-color': '#4CAF50', 'target-arrow-color': '#4CAF50' },
-              },
-              {
-                selector: 'edge[relationship_type="contradicts"]',
-                style: { 'line-color': '#F44336', 'target-arrow-color': '#F44336' },
-              },
-              {
-                selector: 'edge[relationship_type="inspired_by"]',
-                style: { 'line-color': '#2196F3', 'target-arrow-color': '#2196F3' },
-              },
-              {
-                selector: 'edge[relationship_type="relates_to"]',
-                style: { 'line-color': '#999', 'target-arrow-color': '#999' },
-              },
-              // Selected edge
-              {
-                selector: 'edge:selected',
-                style: { 'line-color': '#3B4E76', 'target-arrow-color': '#3B4E76', opacity: 0.9, width: 3 },
-              },
-            ]}
-          />
+                // Edge for different relationship types
+                {
+                  selector: 'edge[relationship_type="supports"]',
+                  style: { 'line-color': '#4CAF50', 'target-arrow-color': '#4CAF50' },
+                },
+                {
+                  selector: 'edge[relationship_type="contradicts"]',
+                  style: { 'line-color': '#F44336', 'target-arrow-color': '#F44336' },
+                },
+                {
+                  selector: 'edge[relationship_type="inspired_by"]',
+                  style: { 'line-color': '#2196F3', 'target-arrow-color': '#2196F3' },
+                },
+                {
+                  selector: 'edge[relationship_type="relates_to"]',
+                  style: { 'line-color': '#999', 'target-arrow-color': '#999' },
+                },
+                // Selected edge
+                {
+                  selector: 'edge:selected',
+                  style: {
+                    'line-color': '#3B4E76',
+                    'target-arrow-color': '#3B4E76',
+                    opacity: 0.9,
+                    width: 3,
+                  },
+                },
+              ]}
+            />
           </div>
         </>
       ) : null}
