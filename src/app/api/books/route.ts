@@ -4,11 +4,11 @@ type BookItem = {
   title: string;
   authors: string[];
   publisher: string;
-  publishedAt: string;       // Kakao 'datetime' 그대로(시간 포함 가능)
-  isbn: string;              // 원본 그대로(ISBN10/13 공백 혼합 가능)
-  isbn13: string | null;     // 정규식으로 13자리만 추출; 없으면 null (확실하지 않음: 카카오 측 표기 일관성)
-  thumbnail: string | null;  // 빈 문자열이면 null
-  sourceUrl: string | null;  // Kakao 'url'
+  publishedAt: string; // Kakao 'datetime' 그대로(시간 포함 가능)
+  isbn: string; // 원본 그대로(ISBN10/13 공백 혼합 가능)
+  isbn13: string | null; // 정규식으로 13자리만 추출; 없으면 null (확실하지 않음: 카카오 측 표기 일관성)
+  thumbnail: string | null; // 빈 문자열이면 null
+  sourceUrl: string | null; // Kakao 'url'
 };
 
 type BooksResponse = {
@@ -45,7 +45,10 @@ export async function GET(req: NextRequest): Promise<Response> {
   // Provider key checks
   if (provider === 'aladin') {
     if (!process.env.ALADIN_TTB_KEY) {
-      return Response.json({ error: 'ALADIN_TTB_KEY is not set', details: 'Set in environment and redeploy' }, { status: 500 });
+      return Response.json(
+        { error: 'ALADIN_TTB_KEY is not set', details: 'Set in environment and redeploy' },
+        { status: 500 }
+      );
     }
   } else {
     return Response.json({ error: 'Unsupported provider', details: provider }, { status: 400 });
@@ -64,7 +67,10 @@ export async function GET(req: NextRequest): Promise<Response> {
   const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '0.0.0.0';
   const key = `${ip}:${query}`;
   if (!rateLimit(key)) {
-    return Response.json({ error: 'Too Many Requests', details: 'Please retry later' }, { status: 429 });
+    return Response.json(
+      { error: 'Too Many Requests', details: 'Please retry later' },
+      { status: 429 }
+    );
   }
 
   // No Kakao branch anymore; default and only provider is Aladin
@@ -88,7 +94,7 @@ export async function GET(req: NextRequest): Promise<Response> {
   }
   // 알라딘 JSON 구조는 문서에 상세 기술이 부족 — 안전하게 text로 받아 파싱 시도
   const raw = await res2.text();
-  let data2: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  let data2: any;
   try {
     data2 = JSON.parse(raw);
   } catch {
@@ -96,11 +102,19 @@ export async function GET(req: NextRequest): Promise<Response> {
     const start = raw.indexOf('{');
     const end = raw.lastIndexOf('}');
     if (start >= 0 && end > start) {
-      try { data2 = JSON.parse(raw.slice(start, end + 1)); } catch {
-        return Response.json({ error: 'Parse error', details: raw.slice(0, 200) + '...' }, { status: 502 });
+      try {
+        data2 = JSON.parse(raw.slice(start, end + 1));
+      } catch {
+        return Response.json(
+          { error: 'Parse error', details: raw.slice(0, 200) + '...' },
+          { status: 502 }
+        );
       }
     } else {
-      return Response.json({ error: 'Parse error', details: raw.slice(0, 200) + '...' }, { status: 502 });
+      return Response.json(
+        { error: 'Parse error', details: raw.slice(0, 200) + '...' },
+        { status: 502 }
+      );
     }
   }
 
@@ -117,7 +131,12 @@ export async function GET(req: NextRequest): Promise<Response> {
   const items: BookItem[] = arr.map((d) => {
     const title: string = d.title ?? '';
     const authorsText: string = d.author ?? '';
-    const authors: string[] = authorsText ? authorsText.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+    const authors: string[] = authorsText
+      ? authorsText
+          .split(',')
+          .map((s: string) => s.trim())
+          .filter(Boolean)
+      : [];
     const publisher: string = d.publisher ?? '';
     const publishedAt: string = d.pubDate ?? d.pubdate ?? ''; // 형식: yyyymmdd (ISO 아님)
     const isbn13: string | null = d.isbn13 ? String(d.isbn13) : null;
@@ -131,12 +150,10 @@ export async function GET(req: NextRequest): Promise<Response> {
       isbn: String(d.isbn ?? isbn13 ?? ''),
       isbn13,
       thumbnail: cover,
-      sourceUrl: link
+      sourceUrl: link,
     };
   });
   const isEnd = page * size >= Math.min(total, 200); // 알라딘은 총 200까지만 검색 가능
   const body: BooksResponse = { items, isEnd, page, size, query };
   return Response.json(body);
 }
-
-

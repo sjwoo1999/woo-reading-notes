@@ -5,12 +5,20 @@ import CytoscapeComponent from 'react-cytoscapejs';
 import { useRouter } from 'next/navigation';
 
 export default function GraphPage() {
+  // TODO: Implement graph filtering
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [minWeight, setMinWeight] = useState(1);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [tags, setTags] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [entities, setEntities] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [direct, setDirect] = useState(true);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [alpha, setAlpha] = useState(1);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [beta, setBeta] = useState(1);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [gamma, setGamma] = useState(2);
   const [data, setData] = useState<{ nodes: any[]; edges: any[] } | null>(null);
   const [loading, setLoading] = useState(false);
@@ -23,10 +31,16 @@ export default function GraphPage() {
   // Cleanup cytoscape and in-flight requests on unmount
   useEffect(() => {
     return () => {
-      try { cyRef.current?.off('tap'); } catch {}
-      try { cyRef.current?.destroy?.(); } catch {}
+      try {
+        cyRef.current?.off('tap');
+      } catch {}
+      try {
+        cyRef.current?.destroy?.();
+      } catch {}
       cyRef.current = null;
-      try { abortRef.current?.abort(); } catch {}
+      try {
+        abortRef.current?.abort();
+      } catch {}
       abortRef.current = null;
     };
   }, []);
@@ -38,21 +52,22 @@ export default function GraphPage() {
         id: `demo-${i + 1}`,
         label: `샘플 도서 ${i + 1}`,
         type: 'book',
-        cover: covers[i % covers.length]
-      }
+        cover: covers[i % covers.length],
+      },
     }));
     const edges = [
       { data: { id: 'e1', source: 'demo-1', target: 'demo-2', weight: 3, kind: 'mix' } },
       { data: { id: 'e2', source: 'demo-2', target: 'demo-3', weight: 2, kind: 'mix' } },
       { data: { id: 'e3', source: 'demo-3', target: 'demo-4', weight: 1, kind: 'mix' } },
       { data: { id: 'e4', source: 'demo-1', target: 'demo-5', weight: 2, kind: 'mix' } },
-      { data: { id: 'e5', source: 'demo-4', target: 'demo-6', weight: 3, kind: 'mix' } }
+      { data: { id: 'e5', source: 'demo-4', target: 'demo-6', weight: 3, kind: 'mix' } },
     ];
     return { nodes, edges };
   }
 
   async function renderGraph() {
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
     try {
       // Cancel previous request if it is still in-flight
       if (abortRef.current) abortRef.current.abort();
@@ -61,10 +76,14 @@ export default function GraphPage() {
       setIsSample(false);
       const params = new URLSearchParams({
         minWeight: String(minWeight),
-        tags: String(tags), entities: String(entities), direct: String(direct),
-        alpha: String(alpha), beta: String(beta), gamma: String(gamma)
+        tags: String(tags),
+        entities: String(entities),
+        direct: String(direct),
+        alpha: String(alpha),
+        beta: String(beta),
+        gamma: String(gamma),
       });
-      const res = await fetch(`/api/graph?${params.toString()}` , { signal: controller.signal });
+      const res = await fetch(`/api/graph?${params.toString()}`, { signal: controller.signal });
       const json = await res.json();
       if (!res.ok) {
         if (res.status === 401) {
@@ -101,7 +120,7 @@ export default function GraphPage() {
   // Always compute elements via hook (do not call hooks conditionally)
   const elements = useMemo(() => {
     if (!data) return [] as any;
-    return ([...data.nodes, ...data.edges] as any);
+    return [...data.nodes, ...data.edges] as any;
   }, [data]);
 
   return (
@@ -109,28 +128,40 @@ export default function GraphPage() {
       <h1 className="text-xl font-semibold">그래프</h1>
       {loading ? <div className="text-sm opacity-70">불러오는 중…</div> : null}
 
-      {error ? <div className="vintage-card p-3" style={{color:'#b00'}}>오류: {error}</div> : null}
-      {isSample ? (
-        <div className="vintage-card p-3 h-stack" style={{justifyContent:'space-between', alignItems:'center'}}>
-          <div>로그인 시 내 책 그래프가 표시됩니다. 지금은 샘플 그래프입니다.</div>
-          <button className="vintage-button" onClick={()=>router.push('/auth')}>로그인</button>
+      {error ? (
+        <div className="vintage-card p-3" style={{ color: '#b00' }}>
+          오류: {error}
         </div>
       ) : null}
-      {data && (data.nodes.length === 0 && data.edges.length === 0) ? (
+      {isSample ? (
+        <div
+          className="vintage-card p-3 h-stack"
+          style={{ justifyContent: 'space-between', alignItems: 'center' }}
+        >
+          <div>로그인 시 내 책 그래프가 표시됩니다. 지금은 샘플 그래프입니다.</div>
+          <button className="vintage-button" onClick={() => router.push('/auth')}>
+            로그인
+          </button>
+        </div>
+      ) : null}
+      {data && data.nodes.length === 0 && data.edges.length === 0 ? (
         <div className="vintage-card p-4">결과가 없습니다.</div>
       ) : null}
 
       {data ? (
-        <div className="vintage-card p-2" style={{height:520}}>
-          <div className="text-sm opacity-70 mb-2 px-2">Nodes: {data.nodes.length} · Edges: {data.edges.length}</div>
+        <div className="vintage-card p-2" style={{ height: 520 }}>
+          <div className="text-sm opacity-70 mb-2 px-2">
+            Nodes: {data.nodes.length} · Edges: {data.edges.length}
+          </div>
           <CytoscapeComponent
             key={isSample ? 'sample' : 'live'}
-            cy={(cy)=>{
+            cy={(cy) => {
               if (!cy) return;
               cyRef.current = cy;
               cy.off('tap');
-              const uuidLike = /^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$/;
-              cy.on('tap', 'node', (evt)=>{
+              const uuidLike =
+                /^(?:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$/;
+              cy.on('tap', 'node', (evt) => {
                 const id = evt.target.id();
                 if (isSample || (typeof id === 'string' && id.startsWith('demo-'))) return;
                 if (typeof id === 'string' && uuidLike.test(id)) {
@@ -143,16 +174,40 @@ export default function GraphPage() {
                   }, 0);
                 }
               });
-              cy.on('tap', (e)=>{ if (e.target === cy) cy.elements().unselect(); });
+              cy.on('tap', (e) => {
+                if (e.target === cy) cy.elements().unselect();
+              });
             }}
             elements={elements}
             style={{ width: '100%', height: '100%' }}
             layout={{ name: 'cose', animate: true }}
             stylesheet={[
-              { selector: 'node', style: { 'shape': 'ellipse', 'width': 72, 'height': 72, 'background-fit': 'cover', 'background-image': 'data(cover)', 'border-width': 1, 'border-color': '#D7C9A7' } },
-              { selector: 'node:selected', style: { 'overlay-opacity': 0.1, 'overlay-color': '#3B4E76' } },
-              { selector: 'edge', style: { 'line-color': '#999', 'opacity': 0.6, 'width': 'mapData(weight, 1, 10, 1, 6)', 'curve-style': 'bezier' } },
-              { selector: 'edge:selected', style: { 'line-color': '#3B4E76', 'opacity': 0.9 } },
+              {
+                selector: 'node',
+                style: {
+                  shape: 'ellipse',
+                  width: 72,
+                  height: 72,
+                  'background-fit': 'cover',
+                  'background-image': 'data(cover)',
+                  'border-width': 1,
+                  'border-color': '#D7C9A7',
+                },
+              },
+              {
+                selector: 'node:selected',
+                style: { 'overlay-opacity': 0.1, 'overlay-color': '#3B4E76' },
+              },
+              {
+                selector: 'edge',
+                style: {
+                  'line-color': '#999',
+                  opacity: 0.6,
+                  width: 'mapData(weight, 1, 10, 1, 6)',
+                  'curve-style': 'bezier',
+                },
+              },
+              { selector: 'edge:selected', style: { 'line-color': '#3B4E76', opacity: 0.9 } },
             ]}
           />
         </div>

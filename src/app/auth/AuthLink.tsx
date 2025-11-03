@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import { useEffect, useState } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 
@@ -11,12 +11,28 @@ export default function AuthLink() {
     const { data: sub } = sb.auth.onAuthStateChange((_event, session) => {
       setEmail(session?.user?.email ?? null);
     });
-    return () => { sub.subscription.unsubscribe(); };
+    return () => {
+      sub.subscription.unsubscribe();
+    };
   }, [sb]);
 
-  if (!email) return <a className="vintage-link" href="/auth">로그인</a>;
+  if (!email)
+    return (
+      <a className="vintage-link" href="/auth">
+        로그인
+      </a>
+    );
 
   return (
-    <button type="button" className="vintage-link" onClick={async () => { await sb.auth.signOut(); window.location.reload(); }}>로그아웃</button>
+    <button
+      type="button"
+      className="vintage-link"
+      onClick={async () => {
+        await sb.auth.signOut();
+        window.location.reload();
+      }}
+    >
+      로그아웃
+    </button>
   );
 }

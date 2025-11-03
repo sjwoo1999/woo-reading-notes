@@ -16,5 +16,3 @@ declare module 'react-cytoscapejs' {
   const CytoscapeComponent: ComponentType<CytoscapeComponentProps>;
   export default CytoscapeComponent;
 }
-
-

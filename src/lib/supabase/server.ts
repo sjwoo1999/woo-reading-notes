@@ -16,7 +16,7 @@ export function supabaseServer() {
         async remove(name: string, options: any) {
           (await cookies()).set({ name, value: '', ...options, maxAge: 0 });
         },
-      }
+      },
     }
   );
 }

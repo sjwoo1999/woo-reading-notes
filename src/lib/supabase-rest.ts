@@ -3,7 +3,7 @@ export function restHeaders() {
   return {
     apikey: key,
     Authorization: `Bearer ${key}`,
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   } as Record<string, string>;
 }
 
@@ -22,6 +22,6 @@ export function restHeadersWithSession(accessToken: string) {
   return {
     apikey: key,
     Authorization: `Bearer ${accessToken}`,
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
   } as Record<string, string>;
 }

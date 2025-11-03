@@ -1,4 +1,4 @@
-"use client";
+'use client';
 import { useEffect, useState } from 'react';
 
 export default function Visitors() {
@@ -7,7 +7,7 @@ export default function Visitors() {
 
   useEffect(() => {
     const key = 'visited-today';
-    const todayStr = new Date().toISOString().slice(0,10);
+    const todayStr = new Date().toISOString().slice(0, 10);
     const mark = localStorage.getItem(key);
     async function tick() {
       if (mark !== todayStr) {

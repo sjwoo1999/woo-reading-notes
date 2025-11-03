@@ -16,5 +16,3 @@ export function isAdmin(email: string | null): boolean {
     .filter(Boolean);
   return list.includes(email.trim().toLowerCase());
 }
-
-

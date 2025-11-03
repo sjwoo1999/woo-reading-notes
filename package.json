@@ -6,7 +6,15 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint \"src/**/*.{ts,tsx}\" --max-warnings 0",
+    "lint:fix": "eslint \"src/**/*.{ts,tsx}\" --fix",
+    "format": "prettier --write \"src/**/*.{ts,tsx,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,json}\"",
+    "type-check": "tsc --noEmit",
+    "validate:env": "npx ts-node scripts/validate-env.ts",
+    "db:seed": "npx ts-node scripts/db/seed.ts",
+    "db:reset": "npx ts-node scripts/db/reset.ts",
+    "db:migrate": "npx ts-node scripts/db/migrate.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.7.0",
@@ -27,7 +35,9 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
+    "prettier": "^3.0.0",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.0",
     "typescript": "^5"
   }
 }
