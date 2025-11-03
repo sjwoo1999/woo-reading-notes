@@ -254,12 +254,14 @@ Authorization: Bearer {jwt_token}
 
 ### Notes
 
-#### Get Book Notes
+Notes are standalone knowledge items that can be one of three types: `book`, `concept`, or `quote`. They form the foundation of the knowledge graph and can be linked together to show relationships.
 
-Fetch all notes for a specific book.
+#### Get All Notes
+
+Retrieve all notes for authenticated user.
 
 ```
-GET /api/books/{bookId}/notes
+GET /api/notes
 ```
 
 **Headers**:
@@ -269,28 +271,31 @@ Authorization: Bearer {jwt_token}
 
 **Response** (200 OK):
 ```json
-{
-  "notes": [
-    {
-      "id": "550e8400-e29b-41d4-a716-446655440001",
-      "title": "Key Quote",
-      "content": "Chapter passage analysis...",
-      "location": "Chapter 3, Page 42",
-      "highlight_color": "yellow",
-      "created_at": "2025-01-01T00:00:00Z"
-    }
-  ]
-}
+[
+  {
+    "id": "550e8400-e29b-41d4-a716-446655440001",
+    "type": "concept",
+    "title": "Machine Learning Fundamentals",
+    "content": "Overview of ML algorithms and applications...",
+    "metadata": {
+      "source": "course-ml-101",
+      "difficulty": "intermediate"
+    },
+    "tags": ["ml", "ai", "learning"],
+    "created_at": "2025-01-01T00:00:00Z",
+    "updated_at": "2025-01-02T00:00:00Z"
+  }
+]
 ```
 
 ---
 
 #### Create Note
 
-Add a note to a book.
+Create a new note with specified type.
 
 ```
-POST /api/books/{bookId}/notes
+POST /api/notes
 ```
 
 **Headers**:
@@ -302,22 +307,277 @@ Content-Type: application/json
 **Request Body**:
 ```json
 {
-  "title": "Key Quote",
-  "content": "The great quote from the book...",
-  "location": "Chapter 3, Page 42",
-  "highlight_color": "yellow"
+  "type": "concept",
+  "title": "Machine Learning Fundamentals",
+  "content": "Overview of ML algorithms...",
+  "metadata": {
+    "source": "course-ml-101",
+    "difficulty": "intermediate"
+  },
+  "tags": ["ml", "ai", "learning"]
 }
 ```
+
+**Required Fields**: `type`, `title`
+**Optional Fields**: `content`, `metadata`, `tags`
+
+**Valid Types**: `book`, `concept`, `quote`
 
 **Response** (201 Created):
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440001",
-  "title": "Key Quote",
-  "content": "The great quote...",
-  "location": "Chapter 3, Page 42",
-  "highlight_color": "yellow",
+  "type": "concept",
+  "title": "Machine Learning Fundamentals",
+  "content": "Overview of ML algorithms...",
+  "metadata": {
+    "source": "course-ml-101",
+    "difficulty": "intermediate"
+  },
+  "tags": ["ml", "ai", "learning"],
+  "user_id": "user-123",
+  "created_at": "2025-01-03T00:00:00Z",
+  "updated_at": "2025-01-03T00:00:00Z"
+}
+```
+
+**Error Response** (400 Bad Request):
+```json
+{
+  "error": "Invalid note type. Must be one of: book, concept, quote"
+}
+```
+
+---
+
+#### Get Note Details
+
+Retrieve a specific note by ID.
+
+```
+GET /api/notes/{id}
+```
+
+**Headers**:
+```
+Authorization: Bearer {jwt_token}
+```
+
+**Response** (200 OK):
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "type": "concept",
+  "title": "Machine Learning Fundamentals",
+  "content": "Overview of ML algorithms...",
+  "metadata": {},
+  "tags": ["ml", "ai"],
+  "created_at": "2025-01-01T00:00:00Z",
+  "updated_at": "2025-01-02T00:00:00Z"
+}
+```
+
+**Error Response** (404 Not Found):
+```json
+{
+  "error": "Note not found"
+}
+```
+
+---
+
+#### Update Note
+
+Update a note's fields. Only provided fields are updated.
+
+```
+PATCH /api/notes/{id}
+```
+
+**Headers**:
+```
+Authorization: Bearer {jwt_token}
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "title": "Updated Title",
+  "content": "Updated content...",
+  "tags": ["ml", "ai", "deep-learning"]
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440001",
+  "type": "concept",
+  "title": "Updated Title",
+  "content": "Updated content...",
+  "tags": ["ml", "ai", "deep-learning"],
+  "updated_at": "2025-01-03T01:00:00Z"
+}
+```
+
+---
+
+#### Delete Note
+
+Soft delete a note (sets `deleted_at` timestamp).
+
+```
+DELETE /api/notes/{id}
+```
+
+**Headers**:
+```
+Authorization: Bearer {jwt_token}
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true
+}
+```
+
+---
+
+### Links
+
+Links represent relationships between notes in the knowledge graph. Each link has a source note, target note, and a relationship type.
+
+#### Get All Links
+
+Retrieve all links for authenticated user.
+
+```
+GET /api/links
+```
+
+**Headers**:
+```
+Authorization: Bearer {jwt_token}
+```
+
+**Response** (200 OK):
+```json
+[
+  {
+    "id": "link-123",
+    "source_note_id": "note-1",
+    "target_note_id": "note-2",
+    "relationship_type": "relates_to",
+    "created_at": "2025-01-01T00:00:00Z"
+  }
+]
+```
+
+---
+
+#### Create Link
+
+Create a bidirectional link between two notes.
+
+```
+POST /api/links
+```
+
+**Headers**:
+```
+Authorization: Bearer {jwt_token}
+Content-Type: application/json
+```
+
+**Request Body**:
+```json
+{
+  "source_note_id": "550e8400-e29b-41d4-a716-446655440001",
+  "target_note_id": "550e8400-e29b-41d4-a716-446655440002",
+  "relationship_type": "relates_to"
+}
+```
+
+**Required Fields**: `source_note_id`, `target_note_id`, `relationship_type`
+
+**Valid Relationship Types**:
+- `relates_to` - General relationship
+- `supports` - Target supports source concept
+- `contradicts` - Target contradicts source
+- `inspired_by` - Source inspired by target
+
+**Response** (201 Created):
+```json
+{
+  "id": "link-123",
+  "source_note_id": "550e8400-e29b-41d4-a716-446655440001",
+  "target_note_id": "550e8400-e29b-41d4-a716-446655440002",
+  "relationship_type": "relates_to",
+  "user_id": "user-123",
   "created_at": "2025-01-03T00:00:00Z"
+}
+```
+
+**Error Responses**:
+```json
+{
+  "error": "Cannot create self-referential links"
+}
+```
+
+```json
+{
+  "error": "Link between these notes already exists"
+}
+```
+
+---
+
+#### Get Link Details
+
+Retrieve a specific link by ID.
+
+```
+GET /api/links/{id}
+```
+
+**Headers**:
+```
+Authorization: Bearer {jwt_token}
+```
+
+**Response** (200 OK):
+```json
+{
+  "id": "link-123",
+  "source_note_id": "550e8400-e29b-41d4-a716-446655440001",
+  "target_note_id": "550e8400-e29b-41d4-a716-446655440002",
+  "relationship_type": "relates_to",
+  "created_at": "2025-01-01T00:00:00Z"
+}
+```
+
+---
+
+#### Delete Link
+
+Remove a link between notes.
+
+```
+DELETE /api/links/{id}
+```
+
+**Headers**:
+```
+Authorization: Bearer {jwt_token}
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true
 }
 ```
 
@@ -414,40 +674,101 @@ Authorization: Bearer {jwt_token}
 
 #### Get Knowledge Graph
 
-Fetch graph data for visualization.
+Fetch graph data for visualization. Returns nodes (notes) and edges (links) suitable for rendering with Cytoscape.js or similar visualization libraries.
 
 ```
-GET /api/graph?public={boolean}
+GET /api/graph?type={type}&tag={tag}
 ```
 
 **Parameters**:
-| Name | Type | Default | Notes |
-|------|------|---------|-------|
-| public | boolean | false | Include public shares only |
+| Name | Type | Default | Required | Notes |
+|------|------|---------|----------|-------|
+| type | string | - | No | Filter by note type (book, concept, quote) |
+| tag | string | - | No | Filter by tag name |
+
+**Headers**:
+```
+Authorization: Bearer {jwt_token}
+```
 
 **Response** (200 OK):
 ```json
 {
   "nodes": [
     {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "label": "Machine Learning Fundamentals",
+      "type": "concept",
       "data": {
-        "id": "book-uuid",
-        "label": "Book Title",
-        "type": "book"
+        "title": "Machine Learning Fundamentals",
+        "type": "concept",
+        "metadata": {
+          "source": "course-ml-101"
+        },
+        "tags": ["ml", "ai", "learning"]
+      }
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "label": "Neural Networks",
+      "type": "concept",
+      "data": {
+        "title": "Neural Networks",
+        "type": "concept",
+        "metadata": {},
+        "tags": ["ml", "deep-learning"]
       }
     }
   ],
   "edges": [
     {
-      "data": {
-        "source": "book-uuid",
-        "target": "entity-uuid",
-        "label": "mentions"
-      }
+      "source": "550e8400-e29b-41d4-a716-446655440001",
+      "target": "550e8400-e29b-41d4-a716-446655440002",
+      "relationship_type": "supports"
     }
-  ]
+  ],
+  "stats": {
+    "total_nodes": 2,
+    "total_edges": 1,
+    "density": 0.5
+  }
 }
 ```
+
+**Query Examples**:
+```bash
+# Get all notes and links
+curl -H "Authorization: Bearer $JWT" \
+  "http://localhost:3000/api/graph"
+
+# Filter by note type
+curl -H "Authorization: Bearer $JWT" \
+  "http://localhost:3000/api/graph?type=concept"
+
+# Filter by tag
+curl -H "Authorization: Bearer $JWT" \
+  "http://localhost:3000/api/graph?tag=ml"
+
+# Combine filters
+curl -H "Authorization: Bearer $JWT" \
+  "http://localhost:3000/api/graph?type=concept&tag=ml"
+```
+
+**Node Structure**:
+- `id`: Unique note identifier (UUID)
+- `label`: Note title (for display)
+- `type`: Note type (book, concept, quote)
+- `data`: Additional metadata including original title, metadata object, and tags
+
+**Edge Structure**:
+- `source`: Source note ID
+- `target`: Target note ID
+- `relationship_type`: Type of relationship (relates_to, supports, contradicts, inspired_by)
+
+**Stats Object**:
+- `total_nodes`: Number of nodes in filtered graph
+- `total_edges`: Number of edges in filtered graph
+- `density`: Graph density (0.0-1.0), calculated as edges / (nodes * (nodes - 1))
 
 ---
 
