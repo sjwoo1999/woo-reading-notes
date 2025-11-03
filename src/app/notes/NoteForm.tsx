@@ -3,6 +3,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { supabaseBrowser } from '@/lib/supabase/client';
 import { z } from 'zod';
+import WikiLinkAutocomplete from './WikiLinkAutocomplete';
 
 type NoteType = 'book' | 'concept' | 'quote';
 
@@ -44,6 +45,11 @@ export default function NoteForm({ onSuccess, initialData }: NoteFormProps) {
   const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
   const [tagSuggestOpen, setTagSuggestOpen] = useState(false);
   const tagDebounceRef = useRef<number | null>(null);
+
+  // Wiki link autocomplete state
+  const [wikiLinkQuery, setWikiLinkQuery] = useState('');
+  const [showWikiLinkAutocomplete, setShowWikiLinkAutocomplete] = useState(false);
+  const contentRef = useRef<HTMLTextAreaElement>(null);
 
   // Fetch tag suggestions
   useEffect(() => {
@@ -121,6 +127,78 @@ export default function NoteForm({ onSuccess, initialData }: NoteFormProps) {
     const arr = [...form.tags];
     arr.pop();
     setForm({ ...form, tags: arr });
+  }
+
+  // Detect wiki link [[...]] pattern and extract query
+  function handleContentChange(value: string) {
+    setForm({ ...form, content: value });
+
+    // Find the last [[ without closing ]]
+    const lastOpenIdx = value.lastIndexOf('[[');
+    if (lastOpenIdx === -1) {
+      setShowWikiLinkAutocomplete(false);
+      setWikiLinkQuery('');
+      return;
+    }
+
+    const afterOpen = value.substring(lastOpenIdx + 2);
+    // Check if there's a closing ]] after the last [[
+    const closeIdx = afterOpen.indexOf(']]');
+    if (closeIdx !== -1) {
+      // There's a closing ]], so we're not in an open [[...]]
+      setShowWikiLinkAutocomplete(false);
+      setWikiLinkQuery('');
+      return;
+    }
+
+    // We're inside [[...]], extract the query
+    const query = afterOpen.split('|')[0].trim();
+    setWikiLinkQuery(query);
+    setShowWikiLinkAutocomplete(true);
+  }
+
+  // Insert selected note as wiki link
+  function handleWikiLinkSelect(note: {
+    id: string;
+    title: string;
+    type: 'book' | 'concept' | 'quote';
+    preview: string;
+  }) {
+    const content = form.content;
+    const lastOpenIdx = content.lastIndexOf('[[');
+
+    if (lastOpenIdx === -1) {
+      setShowWikiLinkAutocomplete(false);
+      return;
+    }
+
+    // Find the position after [[
+    const beforeLink = content.substring(0, lastOpenIdx + 2);
+    const afterOpen = content.substring(lastOpenIdx + 2);
+
+    // Get everything after [[
+    const wikiLinkText = afterOpen.split('|')[0];
+
+    // Create the wiki link with the selected note title
+    const wikiLink = `[[${note.title}]]`;
+
+    // Replace the incomplete link with the complete one
+    const newContent = beforeLink + afterOpen.substring(wikiLinkText.length);
+    const finalContent =
+      newContent.substring(0, lastOpenIdx) + wikiLink + newContent.substring(lastOpenIdx);
+
+    setForm({ ...form, content: finalContent });
+    setShowWikiLinkAutocomplete(false);
+    setWikiLinkQuery('');
+
+    // Focus back to textarea
+    if (contentRef.current) {
+      setTimeout(() => {
+        contentRef.current?.focus();
+        const newPos = lastOpenIdx + wikiLink.length;
+        contentRef.current?.setSelectionRange(newPos, newPos);
+      }, 0);
+    }
   }
 
   async function submit() {
@@ -233,13 +311,28 @@ export default function NoteForm({ onSuccess, initialData }: NoteFormProps) {
         {/* Content */}
         <label className="v-stack">
           <span className="text-sm font-medium">내용</span>
-          <textarea
-            className="vintage-input"
-            value={form.content}
-            onChange={(e) => setForm({ ...form, content: e.target.value })}
-            placeholder="노트의 내용을 작성하세요. 위키링크 [[노트명]] 형식으로 다른 노트를 링크할 수 있습니다."
-            style={{ minHeight: '150px', fontFamily: 'inherit' }}
-          />
+          <div style={{ position: 'relative' }}>
+            <textarea
+              ref={contentRef}
+              className="vintage-input"
+              value={form.content}
+              onChange={(e) => handleContentChange(e.target.value)}
+              onKeyDown={(e) => {
+                // Close autocomplete on Escape
+                if (e.key === 'Escape') {
+                  setShowWikiLinkAutocomplete(false);
+                }
+              }}
+              placeholder="노트의 내용을 작성하세요. 위키링크 [[노트명]] 형식으로 다른 노트를 링크할 수 있습니다."
+              style={{ minHeight: '150px', fontFamily: 'inherit' }}
+            />
+            <WikiLinkAutocomplete
+              isOpen={showWikiLinkAutocomplete}
+              query={wikiLinkQuery}
+              onSelect={handleWikiLinkSelect}
+              onClose={() => setShowWikiLinkAutocomplete(false)}
+            />
+          </div>
         </label>
 
         {/* Tags */}

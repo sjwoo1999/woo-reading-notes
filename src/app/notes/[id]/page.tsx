@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { supabaseBrowser } from '@/lib/supabase/client';
+import NoteContent from '../NoteContent';
 
 type Note = {
   id: string;
@@ -51,6 +52,7 @@ export default function NoteDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [noteIdMap, setNoteIdMap] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     async function fetchNote() {
@@ -75,6 +77,21 @@ export default function NoteDetailPage() {
 
         const noteData = await res.json();
         setNote(noteData);
+
+        // Fetch all notes to build noteIdMap for wiki link rendering
+        const allNotesRes = await fetch('/api/notes', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        if (allNotesRes.ok) {
+          const allNotesData = await allNotesRes.json();
+          const notes = allNotesData.notes || [];
+          const map = new Map<string, string>();
+          for (const n of notes) {
+            map.set(n.title, n.id);
+          }
+          setNoteIdMap(map);
+        }
 
         // Fetch related notes (outgoing links)
         const linksRes = await fetch(`/api/links?note_id=${noteId}`, {
@@ -238,15 +255,7 @@ export default function NoteDetailPage() {
       {note.content && (
         <div className="vintage-card p-4 v-stack">
           <div className="text-sm opacity-70 font-medium">내용</div>
-          <div
-            style={{
-              whiteSpace: 'pre-wrap',
-              wordBreak: 'break-word',
-              lineHeight: '1.6',
-            }}
-          >
-            {note.content}
-          </div>
+          <NoteContent content={note.content} noteIdMap={noteIdMap} />
         </div>
       )}
 
