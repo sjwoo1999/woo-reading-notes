@@ -137,15 +137,20 @@ jobs:
           name: production-build
 
       - name: Deploy to Vercel Production
-        uses: vercel/action@v5
         id: vercel
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          scope: ${{ secrets.VERCEL_ORG_SLUG }}
-          working-directory: ./
-          prod: true
+        run: |
+          npm i -g vercel
+          vercel deploy \
+            --prod \
+            --token=${{ secrets.VERCEL_TOKEN }} \
+            --confirm \
+            --skip-domain
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PROD_NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PROD_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          ALADIN_TTB_KEY: ${{ secrets.ALADIN_TTB_KEY }}
 
       - name: Verify deployment
         run: |
@@ -165,27 +170,9 @@ jobs:
 
       - name: Check application health
         run: |
-          max_attempts=5
-          attempt=1
-
-          while [ $attempt -le $max_attempts ]; do
-            echo \"Health check attempt $attempt/$max_attempts...\"
-
-            # Replace with actual health check endpoint
-            if curl -f -s https://app.example.com/api/auth/me > /dev/null 2>&1; then
-              echo \"✅ Application is healthy\"
-              exit 0
-            fi
-
-            if [ $attempt -lt $max_attempts ]; then
-              echo \"⏳ Waiting before retry...\"
-              sleep 10
-            fi
-
-            attempt=$((attempt + 1))
-          done
-
-          echo \"⚠️ Health check inconclusive (manual verification recommended)\"
+          echo "ℹ️ Vercel deployment initiated"
+          echo "⚠️ Manual health check recommended after deployment"
+          echo "Visit your application URL to verify deployment success"
 
       - name: Check database connectivity
         run: |
@@ -195,20 +182,21 @@ jobs:
 
       - name: Generate deployment report
         run: |
-          echo \"## Production Deployment Report\" >> $GITHUB_STEP_SUMMARY
-          echo \"\" >> $GITHUB_STEP_SUMMARY
-          echo \"**Deployment Status**: ✅ Successful\" >> $GITHUB_STEP_SUMMARY
-          echo \"\" >> $GITHUB_STEP_SUMMARY
-          echo \"### Details\" >> $GITHUB_STEP_SUMMARY
-          echo \"- **Commit**: \`$(git rev-parse --short HEAD)\`\" >> $GITHUB_STEP_SUMMARY
-          echo \"- **Environment**: Production\" >> $GITHUB_STEP_SUMMARY
-          echo \"- **Application URL**: https://app.example.com\" >> $GITHUB_STEP_SUMMARY
-          echo \"- **Timestamp**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')\" >> $GITHUB_STEP_SUMMARY
-          echo \"\" >> $GITHUB_STEP_SUMMARY
-          echo \"### Next Steps\" >> $GITHUB_STEP_SUMMARY
-          echo \"1. Monitor application logs\" >> $GITHUB_STEP_SUMMARY
-          echo \"2. Check user analytics\" >> $GITHUB_STEP_SUMMARY
-          echo \"3. Verify critical features\" >> $GITHUB_STEP_SUMMARY
+          echo "## Production Deployment Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment Status**: ✅ Initiated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: \`$(git rev-parse --short HEAD)\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment**: Production" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service**: Vercel" >> $GITHUB_STEP_SUMMARY
+          echo "- **Timestamp**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps" >> $GITHUB_STEP_SUMMARY
+          echo "1. Check Vercel dashboard for deployment details" >> $GITHUB_STEP_SUMMARY
+          echo "2. Verify your application URL" >> $GITHUB_STEP_SUMMARY
+          echo "3. Test critical features" >> $GITHUB_STEP_SUMMARY
+          echo "4. Monitor Vercel Analytics" >> $GITHUB_STEP_SUMMARY
 
   notify-team:
     name: Notify Team
@@ -229,22 +217,36 @@ jobs:
 
       - name: Create GitHub Release
         if: env.STATUS == 'success'
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: release-${{ github.run_number }}
+          tag_name: v1.0.0-prod-${{ github.run_number }}
           release_name: Production Release #${{ github.run_number }}
           body: |
-            ## Production Deployment
+            ## Production Deployment - v1.0.0
 
-            Commit: ${{ github.sha }}
-            Branch: ${{ github.ref }}
+            **Deployment Details:**
+            - Commit: ${{ github.sha }}
+            - Branch: ${{ github.ref }}
+            - Build Number: ${{ github.run_number }}
 
             **Changes included in this release:**
             - See commit log for details
 
-            **Deployed to**: https://app.example.com
+            **Deployment Status**: ✅ Deployed to Vercel
+
+            **Deployed Features:**
+            - Wiki Link System
+            - Knowledge Graph Visualization
+            - Full-Text Search
+            - Spaced Repetition System (SRS)
+            - Note Management
+            - Advanced Filtering & Sorting
+
+            **Next Steps:**
+            1. Verify application is live at your Vercel domain
+            2. Test critical user workflows
+            3. Monitor Vercel Analytics
+            4. Check application logs
           draft: false
           prerelease: false
 

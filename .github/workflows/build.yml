@@ -65,10 +65,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check if Dockerfile exists
+        id: dockerfile
+        run: |
+          if [ -f "Dockerfile" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Set up Docker Buildx
+        if: steps.dockerfile.outputs.exists == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image
+        if: steps.dockerfile.outputs.exists == 'true'
         uses: docker/build-push-action@v5
         with:
           context: .
@@ -76,6 +87,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: woo-reading-notes:${{ github.sha }}
+
+      - name: Docker build skipped
+        if: steps.dockerfile.outputs.exists == 'false'
+        run: |
+          echo "ℹ️ Docker build skipped: No Dockerfile found"
+          echo "Using Vercel as primary deployment platform"
 
   performance-check:
     name: Performance Check
@@ -129,3 +146,4 @@ jobs:
           echo \"- Build: ✅\" >> $GITHUB_STEP_SUMMARY
           echo \"- Docker Image: ✅\" >> $GITHUB_STEP_SUMMARY
           echo \"- Performance: ✅\" >> $GITHUB_STEP_SUMMARY
+
