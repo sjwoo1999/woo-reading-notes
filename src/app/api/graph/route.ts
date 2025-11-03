@@ -7,21 +7,23 @@ const supabase = createClient(
 );
 
 interface GraphNode {
-  id: string;
-  label: string;
-  type: string;
   data: {
-    title: string;
+    id: string;
+    label: string;
     type: string;
+    title: string;
     metadata?: Record<string, unknown>;
     tags?: string[];
   };
 }
 
 interface GraphEdge {
-  source: string;
-  target: string;
-  relationship_type: string;
+  data: {
+    id: string;
+    source: string;
+    target: string;
+    relationship_type: string;
+  };
 }
 
 interface GraphResponse {
@@ -106,24 +108,26 @@ export async function GET(req: NextRequest) {
       (link) => noteIds.includes(link.source_note_id) && noteIds.includes(link.target_note_id)
     );
 
-    // Transform notes to graph nodes
+    // Transform notes to graph nodes (Cytoscape format)
     const nodes: GraphNode[] = filteredNotes.map((note) => ({
-      id: note.id,
-      label: note.title,
-      type: note.type,
       data: {
-        title: note.title,
+        id: note.id,
+        label: note.title,
         type: note.type,
+        title: note.title,
         metadata: note.metadata as Record<string, unknown>,
         tags: (note.tags as string[]) || [],
       },
     }));
 
-    // Transform links to graph edges
+    // Transform links to graph edges (Cytoscape format)
     const edges: GraphEdge[] = visibleLinks.map((link) => ({
-      source: link.source_note_id,
-      target: link.target_note_id,
-      relationship_type: link.relationship_type,
+      data: {
+        id: `${link.source_note_id}-${link.target_note_id}`,
+        source: link.source_note_id,
+        target: link.target_note_id,
+        relationship_type: link.relationship_type,
+      },
     }));
 
     // Calculate graph stats
