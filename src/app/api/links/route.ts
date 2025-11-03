@@ -9,7 +9,10 @@ const supabase = createClient(
 // Validate UUID format
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// GET /api/links - Retrieve all links for user
+// GET /api/links - Retrieve links for user with optional filtering
+// Query parameters:
+//   - note_id: Filter by source_note_id (outgoing links)
+//   - target_id: Filter by target_note_id (incoming links/backlinks)
 export async function GET(req: NextRequest) {
   try {
     // Get authorization header
@@ -30,12 +33,31 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    // Get all links for user
-    const { data: links, error } = await supabase
-      .from('links')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false });
+    // Parse query parameters
+    const { searchParams } = new URL(req.url);
+    const noteId = searchParams.get('note_id');
+    const targetId = searchParams.get('target_id');
+
+    // Start with base query
+    let query = supabase.from('links').select('*').eq('user_id', user.id);
+
+    // Apply filters if provided
+    if (noteId) {
+      if (!uuidRegex.test(noteId)) {
+        return NextResponse.json({ error: 'Invalid note_id format' }, { status: 400 });
+      }
+      query = query.eq('source_note_id', noteId);
+    }
+
+    if (targetId) {
+      if (!uuidRegex.test(targetId)) {
+        return NextResponse.json({ error: 'Invalid target_id format' }, { status: 400 });
+      }
+      query = query.eq('target_note_id', targetId);
+    }
+
+    // Execute query with ordering
+    const { data: links, error } = await query.order('created_at', { ascending: false });
 
     if (error) {
       console.error('Database error:', error);

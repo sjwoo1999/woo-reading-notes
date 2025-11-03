@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import Visitors from './Visitors';
@@ -32,22 +33,25 @@ export default function RootLayout({
             className="container-vintage"
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
           >
-            <a href="/library" className="vintage-link" style={{ fontWeight: 600 }}>
+            <Link href="/library" className="vintage-link" style={{ fontWeight: 600 }}>
               리딩 노트
-            </a>
+            </Link>
             <nav style={{ display: 'flex', gap: '8px' }}>
-              <a className="vintage-link" href="/library">
+              <Link className="vintage-link" href="/library">
                 라이브러리
-              </a>
-              <a className="vintage-link" href="/graph">
+              </Link>
+              <Link className="vintage-link" href="/notes">
+                노트
+              </Link>
+              <Link className="vintage-link" href="/graph">
                 그래프
-              </a>
-              <a className="vintage-link" href="/tags">
+              </Link>
+              <Link className="vintage-link" href="/tags">
                 태그
-              </a>
-              <a className="vintage-link" href="/settings">
+              </Link>
+              <Link className="vintage-link" href="/settings">
                 설정
-              </a>
+              </Link>
               <AuthLink />
             </nav>
           </div>
