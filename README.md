@@ -1,8 +1,16 @@
 # Woo Reading Notes
 
-A full-stack web application for managing your personal reading library with knowledge graph visualization.
+A modern full-stack application for transforming isolated reading notes into an interconnected **knowledge graph**.
 
-**Features**: Book management • Note-taking • Graph visualization • Tag categorization • Supabase backend
+**Vision**: Convert your reading practice from "collect → forget" into "record → connect → explore → grow"
+
+**Core Features**:
+- 📝 **Note Management** (Books, Concepts, Highlights)
+- 🔗 **Bidirectional Linking** (Wiki-style connections)
+- 📊 **Interactive Graph Visualization** (Explore relationships)
+- 🔍 **Semantic Search** (Find by meaning, not just keywords)
+- ⏰ **Spaced Repetition** (1-3-7-30 day review cycle)
+- 🔐 **Privacy-First** (Personal, secure, offline-capable)
 
 ---
 
@@ -45,6 +53,16 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+---
+
+## 📋 Planning & Specification
+
+### Project Planning (Read First!)
+- **[PRODUCT_BRIEF.md](docs/PRODUCT_BRIEF.md)** - 1-page product overview (problem, value, KPIs, scope)
+- **[PRD_v1.md](docs/PRD_v1.md)** - Complete requirements (features, user scenarios, data model)
+- **[TECH_SPEC.md](docs/TECH_SPEC.md)** - Technical specification (architecture, API, implementation details)
+- **[ROADMAP_8WEEKS.md](docs/ROADMAP_8WEEKS.md)** - 8-week execution plan with weekly milestones
 
 ---
 
