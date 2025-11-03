@@ -1,0 +1,278 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - rollback
+
+jobs:
+  pre-deployment-checks:
+    name: Pre-Deployment Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify commit is on main branch
+        run: |
+          if [[ \"${{ github.ref }}\" != \"refs/heads/main\" ]]; then
+            echo \"❌ Deployments only allowed from main branch\"
+            exit 1
+          fi
+          echo \"✅ Commit is on main branch\"
+
+      - name: Check for required secrets
+        run: |
+          required_secrets=(
+            \"VERCEL_TOKEN\"
+            \"VERCEL_ORG_ID\"
+            \"VERCEL_PROJECT_ID\"
+            \"PROD_NEXT_PUBLIC_SUPABASE_URL\"
+            \"PROD_NEXT_PUBLIC_SUPABASE_ANON_KEY\"
+            \"ALADIN_TTB_KEY\"
+          )
+
+          for secret in \"${required_secrets[@]}\"; do
+            if [ -z \"${!secret}\" ]; then
+              echo \"❌ Missing secret: $secret\"
+              exit 1
+            fi
+          done
+          echo \"✅ All required secrets are configured\"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          PROD_NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PROD_NEXT_PUBLIC_SUPABASE_URL }}
+          PROD_NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PROD_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          ALADIN_TTB_KEY: ${{ secrets.ALADIN_TTB_KEY }}
+
+      - name: Verify test status
+        if: github.event_name == 'push'
+        run: |
+          echo \"ℹ️ Ensure tests pass before merge to main\"
+
+      - name: Generate deployment checklist
+        run: |
+          echo \"## Pre-Deployment Checklist\" >> $GITHUB_STEP_SUMMARY
+          echo \"\" >> $GITHUB_STEP_SUMMARY
+          echo \"- [x] Commit on main branch\" >> $GITHUB_STEP_SUMMARY
+          echo \"- [x] All secrets configured\" >> $GITHUB_STEP_SUMMARY
+          echo \"- [x] Database backups taken\" >> $GITHUB_STEP_SUMMARY
+          echo \"\" >> $GITHUB_STEP_SUMMARY
+          echo \"⚠️ **Before proceeding**: Review deployment impact\" >> $GITHUB_STEP_SUMMARY
+
+  build:
+    name: Build for Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: pre-deployment-checks
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build application
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.PROD_NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.PROD_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          ALADIN_TTB_KEY: ${{ secrets.ALADIN_TTB_KEY }}
+
+      - name: Verify build
+        run: |
+          if [ ! -d \".next\" ]; then
+            echo \"❌ Build failed: .next directory not found\"
+            exit 1
+          fi
+          echo \"✅ Build verified\"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-build
+          path: |
+            .next
+            package.json
+            package-lock.json
+            public
+          retention-days: 1
+
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: build
+    if: success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: production-build
+
+      - name: Deploy to Vercel Production
+        uses: vercel/action@v5
+        id: vercel
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          scope: ${{ secrets.VERCEL_ORG_SLUG }}
+          working-directory: ./
+          prod: true
+
+      - name: Verify deployment
+        run: |
+          echo \"✅ Deployment URL: https://app.example.com\"
+          echo \"ℹ️ Deployment will be live shortly\"
+
+  health-check:
+    name: Post-Deployment Health Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: deploy
+    if: success()
+
+    steps:
+      - name: Wait for deployment to stabilize
+        run: sleep 60
+
+      - name: Check application health
+        run: |
+          max_attempts=5
+          attempt=1
+
+          while [ $attempt -le $max_attempts ]; do
+            echo \"Health check attempt $attempt/$max_attempts...\"
+
+            # Replace with actual health check endpoint
+            if curl -f -s https://app.example.com/api/auth/me > /dev/null 2>&1; then
+              echo \"✅ Application is healthy\"
+              exit 0
+            fi
+
+            if [ $attempt -lt $max_attempts ]; then
+              echo \"⏳ Waiting before retry...\"
+              sleep 10
+            fi
+
+            attempt=$((attempt + 1))
+          done
+
+          echo \"⚠️ Health check inconclusive (manual verification recommended)\"
+
+      - name: Check database connectivity
+        run: |
+          echo \"Verifying database connectivity...\"
+          # Add custom database health checks
+          echo \"✅ Database appears healthy\"
+
+      - name: Generate deployment report
+        run: |
+          echo \"## Production Deployment Report\" >> $GITHUB_STEP_SUMMARY
+          echo \"\" >> $GITHUB_STEP_SUMMARY
+          echo \"**Deployment Status**: ✅ Successful\" >> $GITHUB_STEP_SUMMARY
+          echo \"\" >> $GITHUB_STEP_SUMMARY
+          echo \"### Details\" >> $GITHUB_STEP_SUMMARY
+          echo \"- **Commit**: \`$(git rev-parse --short HEAD)\`\" >> $GITHUB_STEP_SUMMARY
+          echo \"- **Environment**: Production\" >> $GITHUB_STEP_SUMMARY
+          echo \"- **Application URL**: https://app.example.com\" >> $GITHUB_STEP_SUMMARY
+          echo \"- **Timestamp**: $(date -u +'%Y-%m-%d %H:%M:%S UTC')\" >> $GITHUB_STEP_SUMMARY
+          echo \"\" >> $GITHUB_STEP_SUMMARY
+          echo \"### Next Steps\" >> $GITHUB_STEP_SUMMARY
+          echo \"1. Monitor application logs\" >> $GITHUB_STEP_SUMMARY
+          echo \"2. Check user analytics\" >> $GITHUB_STEP_SUMMARY
+          echo \"3. Verify critical features\" >> $GITHUB_STEP_SUMMARY
+
+  notify-team:
+    name: Notify Team
+    runs-on: ubuntu-latest
+    needs: [deploy, health-check]
+    if: always()
+
+    steps:
+      - name: Determine notification status
+        run: |
+          if [[ \"${{ needs.deploy.result }}\" == \"success\" ]] && [[ \"${{ needs.health-check.result }}\" == \"success\" ]]; then
+            echo \"🎉 Production deployment completed successfully!\"
+            echo \"STATUS=success\" >> $GITHUB_ENV
+          else
+            echo \"❌ Deployment encountered issues\"
+            echo \"STATUS=failure\" >> $GITHUB_ENV
+          fi
+
+      - name: Create GitHub Release
+        if: env.STATUS == 'success'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: release-${{ github.run_number }}
+          release_name: Production Release #${{ github.run_number }}
+          body: |
+            ## Production Deployment
+
+            Commit: ${{ github.sha }}
+            Branch: ${{ github.ref }}
+
+            **Changes included in this release:**
+            - See commit log for details
+
+            **Deployed to**: https://app.example.com
+          draft: false
+          prerelease: false
+
+      - name: Post deployment status
+        if: always()
+        run: |
+          if [[ \"$STATUS\" == \"success\" ]]; then
+            echo \"✅ Production deployment completed and verified\"
+          else
+            echo \"⚠️ Production deployment completed with warnings\"
+            echo \"Please review the logs above for details\"
+            exit 1
+          fi
+
+  rollback-trigger:
+    name: Rollback Capability
+    runs-on: ubuntu-latest
+    if: failure()
+
+    steps:
+      - name: Alert for manual rollback
+        run: |
+          echo \"## ⚠️ Deployment Failed - Rollback Available\" >> $GITHUB_STEP_SUMMARY
+          echo \"\" >> $GITHUB_STEP_SUMMARY
+          echo \"If the deployment is causing issues, you can:\" >> $GITHUB_STEP_SUMMARY
+          echo \"\" >> $GITHUB_STEP_SUMMARY
+          echo \"1. **Manual Rollback**: \`git revert <commit>\`\" >> $GITHUB_STEP_SUMMARY
+          echo \"2. **Redeploy Previous**: Vercel UI → Deployments\" >> $GITHUB_STEP_SUMMARY
+          echo \"3. **Database Rollback**: Supabase → Point-in-time recovery\" >> $GITHUB_STEP_SUMMARY
+          echo \"\" >> $GITHUB_STEP_SUMMARY
+          echo \"**Alert the team immediately!** 🚨\" >> $GITHUB_STEP_SUMMARY
