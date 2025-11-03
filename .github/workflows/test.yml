@@ -33,7 +33,8 @@ jobs:
         run: npm run lint -- --max-warnings 0
 
       - name: Check formatting
-        run: npx prettier --check \"src/**/*.{ts,tsx,json}\"
+        run: |
+          npx prettier --check "src/**/*.{ts,tsx,json}"
 
       - name: Type check
         run: npx tsc --noEmit
@@ -99,13 +100,13 @@ jobs:
       - name: Check test status
         if: needs.test.result != 'success'
         run: |
-          echo \"❌ Test job failed\"
+          echo "❌ Test job failed"
           exit 1
 
       - name: Check security status
         if: needs.security.result != 'success'
         run: |
-          echo \"⚠️ Security audit completed (review warnings)\"
+          echo "⚠️ Security audit completed (review warnings)"
 
       - name: Quality gates passed
-        run: echo \"✅ All quality gates passed\"
+        run: echo "✅ All quality gates passed"

@@ -154,8 +154,8 @@ jobs:
 
       - name: Verify deployment
         run: |
-          echo \"✅ Deployment URL: https://app.example.com\"
-          echo \"ℹ️ Deployment will be live shortly\"
+          echo "✅ Deployment URL: https://app.example.com"
+          echo "ℹ️ Deployment will be live shortly"
 
   health-check:
     name: Post-Deployment Health Check
@@ -176,9 +176,9 @@ jobs:
 
       - name: Check database connectivity
         run: |
-          echo \"Verifying database connectivity...\"
+          echo "Verifying database connectivity..."
           # Add custom database health checks
-          echo \"✅ Database appears healthy\"
+          echo "✅ Database appears healthy"
 
       - name: Generate deployment report
         run: |

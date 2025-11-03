@@ -42,11 +42,11 @@ jobs:
 
       - name: Analyze bundle size
         run: |
-          echo \"## Bundle Analysis\" >> $GITHUB_STEP_SUMMARY
-          echo \"\" >> $GITHUB_STEP_SUMMARY
-          echo \"\`\`\`\" >> $GITHUB_STEP_SUMMARY
+          echo "## Bundle Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
           du -sh .next/* | sort -h >> $GITHUB_STEP_SUMMARY || true
-          echo \"\`\`\`\" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
